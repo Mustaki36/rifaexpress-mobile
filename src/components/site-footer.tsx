@@ -11,7 +11,7 @@ export function SiteFooter() {
           </p>
         </div>
         <p className="text-center text-sm text-muted-foreground">
-          Creado con ❤️ para la comunidad.
+          Que la suerte te sonría, y si no, ¡que al menos te diviertas!
         </p>
       </div>
     </footer>
