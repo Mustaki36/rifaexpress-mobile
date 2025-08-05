@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -10,12 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Tag, Ticket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRaffles } from "@/context/RaffleContext";
+import { useAuth } from "@/context/AuthContext";
+import { AuthRequiredDialog } from "@/components/auth-required-dialog";
 
 export default function RafflePage() {
   const params = useParams();
   const { raffles } = useRaffles();
+  const { isAuthenticated } = useAuth();
   const raffle = raffles.find((r) => r.id === params.id);
+  
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const { toast } = useToast();
 
   if (!raffle) {
@@ -44,6 +50,11 @@ export default function RafflePage() {
       });
       return;
     }
+
+    if (!isAuthenticated) {
+      setIsAuthDialogOpen(true);
+      return;
+    }
     
     toast({
         title: "¡Compra exitosa!",
@@ -56,83 +67,86 @@ export default function RafflePage() {
   const totalPrice = selectedNumbers.length * raffle.ticketPrice;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-        <div>
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg shadow-lg mb-6">
-            <Image
-              src={raffle.image}
-              alt={raffle.prize}
-              fill
-              className="object-cover"
-              data-ai-hint={raffle.aiHint}
-            />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold font-headline mb-4 text-primary">
-            {raffle.title}
-          </h1>
-          <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-             <Tag className="h-4 w-4 text-primary"/> <span>Premio: <strong>{raffle.prize}</strong></span>
-          </div>
-           <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-             <Clock className="h-4 w-4 text-primary"/> <span>Sorteo: <strong>{raffle.drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
-          </div>
-          <p className="text-foreground/80 leading-relaxed">
-            {raffle.description}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="text-primary"/>
-                Selecciona tus boletos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <NumberGrid
-                totalTickets={raffle.totalTickets}
-                soldTickets={raffle.soldTickets}
-                selectedNumbers={selectedNumbers}
-                onSelectNumber={handleNumberSelect}
-                pricePerTicket={raffle.ticketPrice}
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          <div>
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg shadow-lg mb-6">
+              <Image
+                src={raffle.image}
+                alt={raffle.prize}
+                fill
+                className="object-cover"
+                data-ai-hint={raffle.aiHint}
               />
-            </CardContent>
-          </Card>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold font-headline mb-4 text-primary">
+              {raffle.title}
+            </h1>
+            <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+              <Tag className="h-4 w-4 text-primary"/> <span>Premio: <strong>{raffle.prize}</strong></span>
+            </div>
+            <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+              <Clock className="h-4 w-4 text-primary"/> <span>Sorteo: <strong>{raffle.drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
+            </div>
+            <p className="text-foreground/80 leading-relaxed">
+              {raffle.description}
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumen de compra</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {selectedNumbers.length > 0 ? (
-                <>
-                  <div className="mb-4">
-                    <h4 className="font-semibold mb-2">Boletos seleccionados:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedNumbers.sort((a,b) => a-b).map(num => 
-                        <Badge key={num} variant="secondary" className="text-base">{num.toString().padStart(3, '0')}</Badge>
-                      )}
+          <div className="flex flex-col gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="text-primary"/>
+                  Selecciona tus boletos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <NumberGrid
+                  totalTickets={raffle.totalTickets}
+                  soldTickets={raffle.soldTickets}
+                  selectedNumbers={selectedNumbers}
+                  onSelectNumber={handleNumberSelect}
+                  pricePerTicket={raffle.ticketPrice}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Resumen de compra</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedNumbers.length > 0 ? (
+                  <>
+                    <div className="mb-4">
+                      <h4 className="font-semibold mb-2">Boletos seleccionados:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNumbers.sort((a,b) => a-b).map(num => 
+                          <Badge key={num} variant="secondary" className="text-base">{num.toString().padStart(3, '0')}</Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-2xl font-bold text-primary">
-                      Total: ${totalPrice}
-                  </div>
-                </>
-              ) : (
-                <p className="text-muted-foreground">
-                  Aún no has seleccionado ningún boleto.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                    <div className="text-2xl font-bold text-primary">
+                        Total: ${totalPrice}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Aún no has seleccionado ningún boleto.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-          <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0}>
-            Comprar Ahora (${totalPrice})
-          </Button>
+            <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0}>
+              Comprar Ahora (${totalPrice})
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+      <AuthRequiredDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} />
+    </>
   );
 }
