@@ -56,7 +56,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
     const timer = setTimeout(() => {
         const { timeLeft, totalSeconds } = calculateTimeLeft(raffle.drawDate);
         setTimeLeft(timeLeft);
-        setTotalSeconds(totalSeconds);
+        setTotalSecondsLeft(totalSeconds);
     }, 1000);
 
     return () => clearTimeout(timer);
