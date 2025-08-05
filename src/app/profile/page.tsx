@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +34,29 @@ export default function ProfilePage() {
   const fullAddress = user.address 
     ? `${user.address.street}, ${user.address.city}, ${user.address.state}, ${user.address.postalCode}, ${user.address.country}`
     : 'No proporcionada';
+    
+  const getRoleDisplayName = (role: 'regular' | 'creator' | 'admin') => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'creator':
+        return 'Creador de Rifas';
+      default:
+        return 'Usuario Regular';
+    }
+  };
+  
+  const getRoleVariant = (role: 'regular' | 'creator' | 'admin') => {
+    switch (role) {
+      case 'admin':
+        return 'destructive';
+      case 'creator':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  }
+
 
   return (
     <>
@@ -48,8 +72,8 @@ export default function ProfilePage() {
             {user.isVerified && <ShieldCheck className="h-8 w-8 text-green-500" />}
         </div>
         <p className="text-muted-foreground">{user.email}</p>
-         <Badge variant={user.role === 'creator' ? "default" : "secondary"} className="mt-2">
-            {user.role === 'creator' ? 'Creador de Rifas' : 'Usuario Regular'}
+         <Badge variant={getRoleVariant(user.role)} className="mt-2">
+            {getRoleDisplayName(user.role)}
          </Badge>
       </section>
 
