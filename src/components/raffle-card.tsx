@@ -61,8 +61,6 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
     return () => clearTimeout(timer);
   });
 
-  const countdownText = `${timeLeft.days}d ${String(timeLeft.hours).padStart(2, '0')}h ${String(timeLeft.minutes).padStart(2, '0')}m ${String(timeLeft.seconds).padStart(2, '0')}s`;
-
   return (
     <Card className={cn(
         "flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
@@ -93,7 +91,14 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
       </CardHeader>
       <CardContent className="flex-grow p-6 pt-0">
         {isSoldOut ? (
-            <CountdownTimer targetDate={raffle.drawDate.toISOString()} isCard={false} />
+            <CountdownTimer 
+                targetDate={raffle.drawDate.toISOString()} 
+                isCard={false}
+                raffleInfo={{
+                    prize: raffle.prize,
+                    drawDate: raffle.drawDate.toLocaleDateString('es-ES', {day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'})
+                }}
+            />
         ) : (
             <>
                 <div className="mb-4">

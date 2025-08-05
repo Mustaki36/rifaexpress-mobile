@@ -3,10 +3,15 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
+import { Info } from 'lucide-react';
 
 interface CountdownTimerProps {
     targetDate: string; // ISO string
     isCard?: boolean;
+    raffleInfo?: {
+        prize: string;
+        drawDate: string;
+    }
 }
 
 const calculateTimeLeft = (targetDate: string) => {
@@ -25,7 +30,7 @@ const calculateTimeLeft = (targetDate: string) => {
     return timeLeft;
 };
 
-export function CountdownTimer({ targetDate, isCard = true }: CountdownTimerProps) {
+export function CountdownTimer({ targetDate, isCard = true, raffleInfo }: CountdownTimerProps) {
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft(targetDate));
 
     useEffect(() => {
@@ -52,9 +57,21 @@ export function CountdownTimer({ targetDate, isCard = true }: CountdownTimerProp
         );
     });
 
+    const finishedContent = (
+         <div className="text-center text-muted-foreground py-4 space-y-2">
+            <Info className="mx-auto h-8 w-8 text-primary"/>
+            <p className="font-semibold">¡Sorteo en curso!</p>
+            {raffleInfo && (
+                <p className="text-xs">
+                    El ganador para <span className="font-bold">{raffleInfo.prize}</span> se anunciará pronto.
+                </p>
+            )}
+        </div>
+    )
+
     const content = (
          <div className="flex justify-around">
-            {timerComponents.length ? timerComponents : <span className="py-8">¡El sorteo ha comenzado!</span>}
+            {timerComponents.length ? timerComponents : finishedContent}
         </div>
     );
     
