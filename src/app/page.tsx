@@ -15,8 +15,11 @@ export default function Home() {
         <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4 text-primary">
           Explora Nuestras Rifas
         </h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Participa en nuestras emocionantes rifas y gana premios increíbles.
+        </p>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto mt-4">
-          Participa en nuestras emocionantes rifas y gana premios increíbles. ¡La suerte está de tu lado!
+          ¡La suerte está de tu lado!
         </p>
       </section>
 
