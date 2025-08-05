@@ -1,0 +1,65 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MOCK_USER } from "@/lib/data";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { User, Mail, Ticket } from "lucide-react";
+
+export default function ProfilePage() {
+  const user = MOCK_USER;
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <section className="mb-12 flex flex-col items-center text-center">
+        <Avatar className="h-24 w-24 mb-4 border-4 border-primary">
+          <AvatarImage src={user.avatar} alt={user.name} />
+          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <h1 className="text-4xl font-bold font-headline text-primary">{user.name}</h1>
+        <p className="text-muted-foreground">{user.email}</p>
+      </section>
+
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-1">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><User /> Información Personal</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <h3 className="font-semibold">Nombre</h3>
+                        <p className="text-muted-foreground">{user.name}</p>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold">Email</h3>
+                        <p className="text-muted-foreground">{user.email}</p>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+        <div className="md:col-span-2">
+            <Card>
+                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Ticket /> Mis Boletos Comprados</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {user.tickets.length > 0 ? user.tickets.map(raffle => (
+                        <div key={raffle.raffleId} className="p-4 border rounded-md bg-background">
+                            <h4 className="font-semibold mb-3 text-primary">{raffle.raffleTitle}</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {raffle.ticketNumbers.map(num => (
+                                    <Badge key={num} variant="secondary" className="text-base font-mono">
+                                        #{num.toString().padStart(3, '0')}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    )) : (
+                        <p className="text-muted-foreground text-center py-4">Aún no has comprado boletos.</p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
