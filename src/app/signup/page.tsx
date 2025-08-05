@@ -39,7 +39,6 @@ const formSchema = z.object({
   state: z.string().min(2, "El estado/provincia debe tener al menos 2 caracteres."),
   postalCode: z.string().min(4, "El código postal no es válido."),
   country: z.string().min(3, "El país debe tener al menos 3 caracteres."),
-  verificationCode: z.string().optional(),
   role: z.enum(["regular", "creator"], {
     required_error: "Debes seleccionar un tipo de cuenta.",
   }),
@@ -54,7 +53,7 @@ const formSchema = z.object({
 type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
 
 export default function SignupPage() {
-  const { signup, requestVerificationCode, verifyCode, isEmailBlocked, allUsers } = useAuth();
+  const { signup, isEmailBlocked } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -64,26 +63,9 @@ export default function SignupPage() {
   const [licenseImage, setLicenseImage] = useState<string | null>(null);
   const [idVerificationStatus, setIdVerificationStatus] = useState<VerificationStatus>('idle');
   const [idVerificationError, setIdVerificationError] = useState<string | null>(null);
-
-  const [codeSent, setCodeSent] = useState(false);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  
-  const [isCodeVerified, setIsCodeVerified] = useState(false);
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (codeSent) {
-      // Allow sending new code once countdown finishes
-      // setCodeSent(false); 
-    }
-    return () => clearTimeout(timer);
-  }, [countdown, codeSent]);
-  
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,13 +80,13 @@ export default function SignupPage() {
       state: "",
       postalCode: "",
       country: "",
-      verificationCode: "",
       role: "regular",
       isOfAge: false,
     },
   });
+  
+    const emailValue = form.watch("email");
 
-  const emailValue = form.watch("email");
 
   useEffect(() => {
     if (!isVerificationEnabled) return;
@@ -201,77 +183,8 @@ export default function SignupPage() {
     }
   }
 
-  const handleRequestCode = async () => {
-    const email = form.getValues("email");
-    const emailError = form.getFieldState("email").error;
-    
-    if (!email || emailError) {
-      toast({ variant: "destructive", title: "Email inválido", description: "Por favor, introduce un email válido para enviar el código." });
-      return;
-    }
 
-    if (isEmailBlocked(email)) {
-       toast({ variant: "destructive", title: "Email Bloqueado", description: "Este email ha sido bloqueado por demasiados intentos fallidos." });
-      return;
-    }
-
-     if (allUsers.some(u => u.email === email)) {
-        toast({ variant: "destructive", title: "Email en uso", description: "Este email ya está registrado. Por favor, inicia sesión." });
-        return;
-    }
-
-    setIsSendingCode(true);
-    try {
-      await requestVerificationCode(email);
-      toast({ 
-        title: "Código de prueba generado", 
-        description: "Busca el código en la consola del navegador (F12)."
-      });
-      setCodeSent(true);
-      setCountdown(60);
-      setIsCodeVerified(false); // Reset verification status on new code
-    } catch (error) {
-       if (error instanceof Error) {
-        toast({ variant: "destructive", title: "Error", description: error.message });
-      }
-    } finally {
-      setIsSendingCode(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    const email = form.getValues("email");
-    const code = form.getValues("verificationCode");
-
-    if (!code || code.length !== 6) {
-      toast({ variant: "destructive", title: "Código inválido", description: "El código debe tener 6 dígitos." });
-      return;
-    }
-
-    setIsVerifyingCode(true);
-    try {
-      // Simulate network delay
-      await new Promise(res => setTimeout(res, 500));
-      const isCodeValid = verifyCode(email, code);
-
-      if (isCodeValid) {
-        setIsCodeVerified(true);
-        toast({ title: "Código verificado", description: "El código de verificación es correcto." });
-      } else {
-        setIsCodeVerified(false);
-        toast({ variant: "destructive", title: "Código incorrecto", description: "El código de verificación no es válido. Inténtalo de nuevo." });
-      }
-    } catch (error) {
-       if (error instanceof Error) {
-         toast({ variant: "destructive", title: "Error", description: error.message });
-       }
-    } finally {
-      setIsVerifyingCode(false);
-    }
-  };
-
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (isVerificationEnabled && idVerificationStatus !== 'success') {
       toast({
         variant: "destructive",
@@ -280,16 +193,12 @@ export default function SignupPage() {
       });
       return;
     }
-
-    if (!isCodeVerified) {
-       toast({ variant: "destructive", title: "Código no verificado", description: "Por favor, verifica tu código de email antes de continuar." });
-       return;
-    }
     
+    setIsSubmitting(true);
     try {
       const { street, city, state, postalCode, country, ...restOfValues } = values;
       const address = { street, city, state, postalCode, country };
-      signup(restOfValues.name, restOfValues.email, restOfValues.password, restOfValues.phone, address, isVerificationEnabled, restOfValues.role);
+      await signup(restOfValues.name, restOfValues.email, restOfValues.password, restOfValues.phone, address, isVerificationEnabled, restOfValues.role);
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. ¡Bienvenido!",
@@ -297,12 +206,18 @@ export default function SignupPage() {
       router.push("/profile");
     } catch (error) {
        if (error instanceof Error) {
+         let friendlyMessage = "No se pudo crear la cuenta.";
+         if (error.message.includes("auth/email-already-in-use")) {
+            friendlyMessage = "Este email ya está registrado. Por favor, inicia sesión."
+         }
          toast({
             variant: "destructive",
             title: "Error en el registro",
-            description: error.message,
+            description: friendlyMessage,
          });
        }
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -333,7 +248,7 @@ export default function SignupPage() {
     }
   }
 
-  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || !isCodeVerified || isEmailBlocked(emailValue);
+  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || isSubmitting || isEmailBlocked(emailValue);
 
   return (
     <div className="container flex items-center justify-center py-12">
@@ -407,7 +322,7 @@ export default function SignupPage() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="tu@email.com" {...field} disabled={countdown > 0} />
+                          <Input type="email" placeholder="tu@email.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -471,39 +386,6 @@ export default function SignupPage() {
                     )}
                   />
               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                  
-                   <div className="space-y-2">
-                     <FormLabel>Verificación de Email</FormLabel>
-                     <Button type="button" onClick={handleRequestCode} disabled={countdown > 0 || isSendingCode || !emailValue || !!form.getFieldState("email").error} className="w-full">
-                        {isSendingCode ? <Loader2 className="mr-2 animate-spin" /> : <Send className="mr-2" />}
-                        {codeSent && countdown > 0 ? `Reenviar en ${countdown}s` : "Enviar código"}
-                     </Button>
-                   </div>
-                   <div>
-                     <FormField
-                      control={form.control}
-                      name="verificationCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Código de Verificación</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Introduce el código de 6 dígitos" {...field} disabled={isCodeVerified} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                   </div>
-                </div>
-
-                <div className="flex justify-center">
-                    <Button type="button" onClick={handleVerifyCode} disabled={!codeSent || isVerifyingCode || isCodeVerified} className="w-full md:w-1/2">
-                        {isVerifyingCode && <Loader2 className="mr-2 animate-spin" />}
-                        {isCodeVerified ? <><BadgeCheck className="mr-2"/> Verificado</> : 'Verificar Código'}
-                    </Button>
-                </div>
 
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -656,6 +538,7 @@ export default function SignupPage() {
                   />
 
               <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
+                {isSubmitting && <Loader2 className="mr-2 animate-spin" />}
                 {isEmailBlocked(emailValue) ? "Email Bloqueado" : "Crear Cuenta"}
               </Button>
             </form>

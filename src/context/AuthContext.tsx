@@ -2,183 +2,210 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { UserProfile, VerificationInfo, Address } from '@/lib/types';
-import { MOCK_USER, MOCK_ADMIN_USER } from '@/lib/data';
-import crypto from 'crypto';
+import { 
+    onAuthStateChanged, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut,
+    User as FirebaseUser
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs } from "firebase/firestore";
+import { auth, db } from '@/lib/firebase';
+import type { UserProfile, Address } from '@/lib/types';
+import { MOCK_ADMIN_USER } from '@/lib/data'; // We'll keep this for now for the admin role
 import { useBlock } from './BlockContext';
-
-// This is a mock user database. In a real application, this would be a database.
-const initialUsers: UserProfile[] = [MOCK_USER, MOCK_ADMIN_USER];
-
-// This is a mock verification code store. In a real app, use a DB or a service like Redis.
-const verificationStore = new Map<string, VerificationInfo>();
-
 
 interface AuthContextType {
   user: UserProfile | null;
-  allUsers: UserProfile[];
+  firebaseUser: FirebaseUser | null;
+  allUsers: UserProfile[]; // This will now also be fetched from Firestore
   isAuthenticated: boolean;
-  login: (email: string, pass: string) => UserProfile | null;
-  logout: () => void;
-  signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => void;
-  addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => void;
-  editUser: (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => void;
-  deleteUser: (userId: string) => void;
-  requestVerificationCode: (email: string) => Promise<void>;
-  verifyCode: (email: string, code: string) => boolean;
+  loading: boolean;
+  login: (email: string, pass: string) => Promise<UserProfile | null>;
+  logout: () => Promise<void>;
+  signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => Promise<void>;
+  addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => Promise<void>;
+  editUser: (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
+  // Verification logic will be simplified or moved server-side in a real app
   isEmailBlocked: (email: string) => boolean;
-  forcePasswordChange: (userId: string, newPass: string) => void;
+  forcePasswordChange: (userId: string, newPass: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [users, setUsers] = useState<UserProfile[]>(initialUsers);
-  const { blockedUsers, blockUser } = useBlock();
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { blockedUsers } = useBlock(); // We'll keep using the mock block context for now
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        // User is signed in, see docs for a list of available properties
+        // https://firebase.google.com/docs/reference/js/firebase.User
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setCurrentUser({ id: user.uid, ...userDocSnap.data() } as UserProfile);
+        } else {
+           // Handle case where user exists in Auth but not in Firestore
+           // This might happen if Firestore data is deleted manually.
+           // For now, we'll just log them out.
+           setCurrentUser(null);
+        }
+      } else {
+        // User is signed out
+        setCurrentUser(null);
+      }
+      setLoading(false);
+    });
+
+    fetchAllUsers();
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  const fetchAllUsers = async () => {
+    const querySnapshot = await getDocs(collection(db, "users"));
+    const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+    setAllUsers(usersList);
+  };
+
 
   const isEmailBlocked = (email: string) => {
     return blockedUsers.some(u => u.email === email);
   }
 
-  const requestVerificationCode = (email: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      // Simulate network delay
-      setTimeout(() => {
-        if (isEmailBlocked(email)) {
-          reject(new Error("Este email ha sido bloqueado."));
-          return;
-        }
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 60 * 1000); // 1 minute expiry
-        verificationStore.set(email, { code, expiresAt, attempts: 0 });
-        console.log(`Verification code for ${email}: ${code}`); // Log for testing
-        resolve();
-      }, 500);
-    });
-  };
-
-  const verifyCode = (email: string, code: string): boolean => {
-    const info = verificationStore.get(email);
-    if (!info) return false;
-
-    // Check expiry
-    if (new Date() > info.expiresAt) {
-      verificationStore.delete(email); // Clean up expired code
-      return false;
+  const login = async (email: string, pass: string): Promise<UserProfile | null> => {
+    if(isEmailBlocked(email)) {
+      throw new Error("Este email ha sido bloqueado.");
     }
     
-    // Check code
-    if (info.code === code) {
-      // Do not delete on success, in case user submits form later
-      return true;
+    // Handle mock admin login separately for now
+    if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
+        setCurrentUser(MOCK_ADMIN_USER);
+        return MOCK_ADMIN_USER;
     }
 
-    // Handle incorrect code
-    info.attempts += 1;
-    if (info.attempts >= 3) {
-      blockUser(email, 'Demasiados intentos de verificación fallidos.');
-      verificationStore.delete(email); // Clean up after blocking
-    } else {
-      verificationStore.set(email, info);
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const userDocRef = doc(db, "users", userCredential.user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (userDocSnap.exists()) {
+        const userData = { id: userCredential.user.uid, ...userDocSnap.data() } as UserProfile;
+        setCurrentUser(userData);
+        return userData;
     }
 
-    return false;
-  };
-
-  useEffect(() => {
-    // In a real app, you might check for a token in localStorage here
-    // For this mock, we'll just start logged out.
-  }, []);
-
-  const login = (email: string, pass: string): UserProfile | null => {
-    if(isEmailBlocked(email)) {
-      console.error("Login attempt for blocked email:", email);
-      return null;
-    }
-    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    // Mock password check - DO NOT DO THIS IN PRODUCTION
-    if (foundUser && pass === foundUser.password) { 
-      setCurrentUser(foundUser);
-      return foundUser;
-    }
     return null;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setCurrentUser(null);
   };
   
-  const addUser = (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => {
-     if (isEmailBlocked(userData.email)) {
-        throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
-    }
-    if (users.some(u => u.email === userData.email)) {
-      throw new Error("El email ya está registrado.");
+  const signup = async (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
+    if (isEmailBlocked(email)) {
+      throw new Error("Este email ha sido bloqueado.");
     }
 
-    const newUser: UserProfile = {
-      ...userData,
-      id: `user-${crypto.randomBytes(8).toString('hex')}`,
-      isVerified: userData.isVerified || false,
-      avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
-      tickets: [],
-      createdAt: new Date(),
-      mustChangePassword: true,
-    };
-     setUsers(prevUsers => [...prevUsers, newUser]);
-  }
-  
-  const editUser = (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
-    setUsers(prevUsers => prevUsers.map(user => {
-      if (user.id !== userId) return user;
-      
-      const updatedUser = { ...user, ...userData };
-      if (userData.name) {
-          updatedUser.avatar = `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`;
-      }
-      return updatedUser;
-    }));
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    const user = userCredential.user;
 
-    // Also update the currently logged-in user if they are the one being edited
-    if (currentUser?.id === userId) {
-        setCurrentUser(prev => prev ? { ...prev, ...userData } as UserProfile : null);
-    }
-  };
-
-  const forcePasswordChange = (userId: string, newPass: string) => {
-    editUser(userId, { password: newPass, mustChangePassword: false });
-  }
-
-  const deleteUser = (userId: string) => {
-    setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-    if (currentUser?.id === userId) {
-        logout();
-    }
-  }
-
-  const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    if (users.some(u => u.email === email)) {
-        throw new Error("El email ya está registrado.");
-    }
-    const newUserProfile: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt'> = {
+    const newUserProfile: Omit<UserProfile, 'id'> = {
        name,
        email,
-       password: pass,
        phone,
        address,
        isVerified,
-       role
+       role,
+       avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
+       tickets: [],
+       createdAt: serverTimestamp(), // Use server timestamp
     };
 
-    addUser(newUserProfile);
-    // Automatically log in the new user
-    login(email, pass); 
+    await setDoc(doc(db, "users", user.uid), newUserProfile);
+    setCurrentUser({ id: user.uid, ...newUserProfile, createdAt: new Date() }); // Approximate client date
+    await fetchAllUsers(); // Refresh users list
   };
 
+  const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => {
+     if (isEmailBlocked(userData.email)) {
+        throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
+    }
+    
+    // This function would typically be a server-side (Cloud Function) operation
+    // to create a user without signing them in. The client-side SDK doesn't
+    // directly support creating a user without logging them in.
+    // For this simulation, we'll skip creating the Auth user and just add to Firestore.
+    // This means the added user won't be able to log in until this is moved to a backend.
+    console.warn("addUser is simulating Firestore entry only. User cannot log in.");
+    
+    const randomId = doc(collection(db, "users")).id;
+    const newUser: Omit<UserProfile, 'id'> = {
+      ...userData,
+      isVerified: userData.isVerified || false,
+      avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
+      tickets: [],
+      createdAt: serverTimestamp(),
+      mustChangePassword: true,
+    };
+    await setDoc(doc(db, "users", randomId), newUser);
+    await fetchAllUsers();
+  }
+  
+  const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
+    const userDocRef = doc(db, "users", userId);
+    await updateDoc(userDocRef, userData);
+    
+    // Also update the currently logged-in user if they are the one being edited
+    if (currentUser?.id === userId) {
+        const updatedUserDoc = await getDoc(userDocRef);
+        setCurrentUser({ id: userId, ...updatedUserDoc.data() } as UserProfile);
+    }
+    await fetchAllUsers();
+  };
+
+  const forcePasswordChange = async (userId: string, newPass: string) => {
+      // Password changes must be done by the authenticated user.
+      // This implementation is simplified. A real app would require re-authentication.
+      if (auth.currentUser && auth.currentUser.uid === userId) {
+          // This is a placeholder. The actual password update would be done with updatePassword from 'firebase/auth'.
+          // For now, we just update the Firestore document.
+          console.warn("Password change is mocked. In a real app, use Firebase Auth's updatePassword.");
+          await editUser(userId, { password: newPass, mustChangePassword: false });
+      } else {
+          throw new Error("No tienes permiso para cambiar la contraseña de este usuario.");
+      }
+  }
+
+  const deleteUser = async (userId: string) => {
+    // Deleting a user should be a privileged, server-side operation.
+    console.warn("deleteUser is a placeholder and doesn't delete the Firebase Auth user.");
+    // In a real app, you'd call a Cloud Function that uses the Admin SDK to delete the user.
+    // await deleteDoc(doc(db, "users", userId));
+    await fetchAllUsers();
+  }
+
+  // Request/verify code logic needs to be re-evaluated.
+  // Firebase has its own email verification flow which is more secure.
+  // We'll stub these out for now.
+  const requestVerificationCode = async (email: string): Promise<void> => {
+    console.warn("Mock function: requestVerificationCode");
+  }
+  const verifyCode = (email: string, code: string): boolean => {
+      console.warn("Mock function: verifyCode. Returning true for simulation.");
+      return true;
+  }
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, allUsers: users, isAuthenticated: !!currentUser, login, logout, signup, addUser, editUser, deleteUser, requestVerificationCode, verifyCode, isEmailBlocked, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, allUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

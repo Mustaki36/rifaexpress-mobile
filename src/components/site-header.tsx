@@ -18,18 +18,14 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BackgroundMusicPlayer } from "./background-music-player";
+import { Skeleton } from "./ui/skeleton";
 
 export function SiteHeader() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, loading } = useAuth();
   const router = useRouter();
-  const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
   
@@ -48,7 +44,9 @@ export function SiteHeader() {
           <MainNav />
           <nav className="flex items-center space-x-2">
             <BackgroundMusicPlayer />
-            {isClient && (
+            {loading ? (
+                <Skeleton className="h-8 w-24 rounded-md" />
+            ) : (
               <>
                 {isAuthenticated && user && user.role !== 'admin' ? (
                   <DropdownMenu>

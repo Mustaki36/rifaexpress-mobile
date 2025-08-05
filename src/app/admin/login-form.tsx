@@ -22,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound, Eye, EyeOff } from "lucide-react";
+import { KeyRound, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 
@@ -35,6 +35,7 @@ export function AdminLoginForm() {
   const { toast } = useToast();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,21 +45,33 @@ export function AdminLoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    const user = login(values.email, values.password);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    try {
+        const user = await login(values.email, values.password);
 
-    if (user && user.role === 'admin') {
-       toast({
-        title: "¡Bienvenido!",
-        description: "Has iniciado sesión como administrador.",
-      });
-      // The parent component will re-render and show the dashboard
-    } else {
-        toast({
+        if (user && user.role === 'admin') {
+           toast({
+            title: "¡Bienvenido!",
+            description: "Has iniciado sesión como administrador.",
+          });
+          // The parent component will re-render and show the dashboard
+        } else {
+            // If login is successful but user is not admin, or login fails
+            toast({
+                variant: "destructive",
+                title: "Acceso Denegado",
+                description: "Credenciales de administrador incorrectas o el usuario no es administrador.",
+            })
+        }
+    } catch (error) {
+         toast({
             variant: "destructive",
             title: "Error de autenticación",
-            description: "Credenciales de administrador incorrectas o el usuario no es administrador.",
+            description: "No se pudo iniciar sesión. Verifica tus credenciales.",
         })
+    } finally {
+        setIsLoading(false);
     }
   }
 
@@ -116,7 +129,8 @@ export function AdminLoginForm() {
                 )}
                 />
                 
-                <Button type="submit" size="lg" className="w-full">
+                <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 animate-spin" />}
                     Ingresar
                 </Button>
             </form>

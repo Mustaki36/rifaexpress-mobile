@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 const formSchema = z.object({
@@ -32,6 +32,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -41,25 +42,39 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const user = login(values.email, values.password);
-    if (user) {
-      toast({
-        title: "¡Bienvenido de vuelta!",
-        description: "Has iniciado sesión exitosamente.",
-      });
-      // Redirect admin users to the admin panel, others to profile
-      if (user.role === 'admin') {
-        router.push("/admin");
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    try {
+      const user = await login(values.email, values.password);
+      if (user) {
+        toast({
+          title: "¡Bienvenido de vuelta!",
+          description: "Has iniciado sesión exitosamente.",
+        });
+        // Redirect admin users to the admin panel, others to profile
+        if (user.role === 'admin') {
+          router.push("/admin");
+        } else {
+          router.push("/profile");
+        }
       } else {
-        router.push("/profile");
+        // The error will be caught by the catch block
       }
-    } else {
-      toast({
+    } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : "Email o contraseña incorrectos.";
+       // Customize error messages from Firebase
+        let friendlyMessage = "Email o contraseña incorrectos.";
+        if (errorMessage.includes("auth/invalid-credential")) {
+            friendlyMessage = "Las credenciales proporcionadas no son correctas. Por favor, inténtalo de nuevo."
+        }
+       
+       toast({
         variant: "destructive",
         title: "Error de autenticación",
-        description: "Email o contraseña incorrectos.",
+        description: friendlyMessage,
       });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -117,7 +132,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                 {isLoading && <Loader2 className="mr-2 animate-spin" />}
                 Ingresar
               </Button>
             </form>
