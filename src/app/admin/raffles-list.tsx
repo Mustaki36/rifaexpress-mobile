@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Users, Trophy, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Users, Trophy, Pencil, Trash2, Search, Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +40,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRaffles } from "@/context/RaffleContext";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import type { Raffle } from "@/lib/types";
+
 
 export function RafflesList() {
   const { toast } = useToast();
@@ -47,10 +50,21 @@ export function RafflesList() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [raffleToDelete, setRaffleToDelete] = useState<string | null>(null);
   const [selectedRaffles, setSelectedRaffles] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredRaffles, setFilteredRaffles] = useState<Raffle[]>(raffles);
+
+  useEffect(() => {
+    const results = raffles.filter(raffle =>
+      raffle.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      raffle.prize.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredRaffles(results);
+  }, [searchTerm, raffles]);
+
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRaffles(raffles.map((r) => r.id));
+      setSelectedRaffles(filteredRaffles.map((r) => r.id));
     } else {
       setSelectedRaffles([]);
     }
@@ -124,19 +138,38 @@ export function RafflesList() {
   return (
     <>
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>Gestionar Rifas</CardTitle>
-            <CardDescription>
-              Visualiza, edita y selecciona ganadores para tus rifas.
-            </CardDescription>
-          </div>
-          {selectedRaffles.length > 0 && (
-            <Button variant="destructive" onClick={confirmDeleteSelected}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar ({selectedRaffles.length})
-            </Button>
-          )}
+        <CardHeader>
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+               <div>
+                    <CardTitle>Gestionar Rifas</CardTitle>
+                    <CardDescription>
+                    Visualiza, edita y selecciona ganadores para tus rifas.
+                    </CardDescription>
+                </div>
+                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-grow sm:flex-grow-0">
+                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Buscar rifa o premio..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-64 pl-10"
+                        />
+                    </div>
+                    <Button variant="outline">
+                        <Filter className="mr-2 h-4 w-4" />
+                        Filtrar
+                    </Button>
+                </div>
+           </div>
+            {selectedRaffles.length > 0 && (
+                <div className="mt-4">
+                    <Button variant="destructive" onClick={confirmDeleteSelected}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar ({selectedRaffles.length})
+                    </Button>
+                </div>
+            )}
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg">
@@ -145,7 +178,7 @@ export function RafflesList() {
                 <TableRow>
                   <TableHead padding="checkbox" className="w-12">
                     <Checkbox
-                      checked={selectedRaffles.length > 0 && selectedRaffles.length === raffles.length}
+                      checked={filteredRaffles.length > 0 && selectedRaffles.length === filteredRaffles.length}
                       onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
                       aria-label="Seleccionar todo"
                     />
@@ -157,7 +190,7 @@ export function RafflesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {raffles.map((raffle) => {
+                {filteredRaffles.map((raffle) => {
                   const progress =
                     (raffle.soldTickets.length / raffle.totalTickets) * 100;
                   const isSelected = selectedRaffles.includes(raffle.id);
@@ -239,4 +272,3 @@ export function RafflesList() {
     </>
   );
 }
-
