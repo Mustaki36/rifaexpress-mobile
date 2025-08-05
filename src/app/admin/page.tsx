@@ -47,7 +47,7 @@ function AdminDashboard() {
           Panel de Administración
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Gestiona todas las rifas, usuarios y configuraciones del sistema.
+          Bienvenido, {user?.name}. Gestiona todas las rifas, usuarios y configuraciones del sistema.
         </p>
       </section>
 

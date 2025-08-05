@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const { blockedUsers } = useBlock();
+  const [isAdminSession, setIsAdminSession] = useState(false);
 
   const fetchAllUsers = useCallback(async () => {
     try {
@@ -59,13 +60,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // If we have an active admin session, don't let onAuthStateChanged override it
+      if (isAdminSession) {
+          setLoading(false);
+          return;
+      }
+      
       setFirebaseUser(user);
       if (user) {
-        if (user.email === MOCK_ADMIN_USER.email) {
-            setCurrentUser(MOCK_ADMIN_USER);
-            setLoading(false);
-            return;
-        }
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
@@ -76,7 +78,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               createdAt: userData.createdAt?.toDate()
           } as UserProfile);
         } else {
-           setCurrentUser(null);
+           // This case can happen if a user is in Firebase Auth but not in Firestore DB
+           // Or during the brief moment of user creation.
+           const localUser = allUsers.find(u => u.id === user.uid);
+           if(localUser) {
+               setCurrentUser(localUser);
+           } else {
+               setCurrentUser(null);
+           }
         }
       } else {
         setCurrentUser(null);
@@ -87,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchAllUsers();
     
     return () => unsubscribe();
-  }, [fetchAllUsers]);
+  }, [fetchAllUsers, isAdminSession, allUsers]);
 
   const isEmailBlocked = (email: string) => {
     return blockedUsers.some(u => u.email === email);
@@ -100,11 +109,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
       setCurrentUser(MOCK_ADMIN_USER);
-      // We don't set FirebaseUser for the mock admin to avoid conflicts
       setFirebaseUser(null); 
+      setIsAdminSession(true); // Set the flag for admin session
       return MOCK_ADMIN_USER;
     }
     
+    setIsAdminSession(false); // Reset admin flag on regular login attempt
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
         const userDocRef = doc(db, "users", userCredential.user.uid);
@@ -120,6 +130,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(userProfile);
             return userProfile;
         } else {
+             // Fallback for admin-created users
+            const localUser = allUsers.find(u => u.email === email && u.password === pass);
+             if (localUser) {
+                setCurrentUser(localUser);
+                setFirebaseUser({ uid: localUser.id, email: localUser.email } as FirebaseUser);
+                return localUser;
+            }
              throw new Error("User profile not found in Firestore.");
         }
     } catch (error) {
@@ -137,12 +154,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    if (currentUser?.role === 'admin' || !auth.currentUser) {
-      setCurrentUser(null);
-      setFirebaseUser(null);
-    } else {
-      await signOut(auth);
+    if (isAdminSession) {
+      setIsAdminSession(false);
     }
+    await signOut(auth).catch(() => {}); // Sign out real user if any
+    setCurrentUser(null);
+    setFirebaseUser(null);
   };
   
   const signup = async (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
@@ -182,6 +199,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setAllUsers(prev => [...prev, createdUser]);
     setCurrentUser(createdUser);
+    setIsAdminSession(false);
   };
 
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
@@ -209,7 +227,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp()
         });
 
-        // Update local state for instant UI update
         const finalUser = { 
             id: docRef.id, 
             ...newUserProfileData,
