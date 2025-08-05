@@ -32,12 +32,14 @@ const prompt = ai.definePrompt({
   name: 'generateDescriptionPrompt',
   input: {schema: GenerateDescriptionInputSchema},
   output: {schema: GenerateDescriptionOutputSchema},
-  prompt: `You are a marketing expert specializing in writing catchy and engaging descriptions for raffles.
+  prompt: `Eres un experto en marketing especializado en escribir descripciones atractivas y cautivadoras para rifas.
 
-  Based on the following prompt, generate a description for the raffle that will attract more participants.
+Basado en la siguiente descripción proporcionada por el usuario, mejórala para que sea más atractiva para los participantes. Mantén el idioma original.
 
-  Prompt: {{{prompt}}}
-  Description:`,
+Descripción del Usuario:
+"{{{prompt}}}"
+
+Descripción Mejorada:`,
 });
 
 const generateDescriptionFlow = ai.defineFlow({

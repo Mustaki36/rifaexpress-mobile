@@ -62,24 +62,24 @@ export function CreateRaffleForm() {
   });
 
   const handleGenerateDescription = async () => {
-    const title = form.getValues("title");
-    if (!title) {
+    const description = form.getValues("description");
+    if (!description) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Por favor, introduce un título para la rifa antes de generar la descripción.",
+        description: "Por favor, escribe una descripción base antes de usar la IA.",
       });
       return;
     }
     
     setIsGenerating(true);
     try {
-      const input: GenerateDescriptionInput = { prompt: `Rifa de ${title}` };
+      const input: GenerateDescriptionInput = { prompt: description };
       const result = await generateDescription(input);
       form.setValue("description", result.description);
        toast({
-        title: "Descripción generada",
-        description: "La descripción ha sido generada y añadida al formulario.",
+        title: "Descripción mejorada",
+        description: "La IA ha mejorado tu descripción. ¡Revísala!",
       });
     } catch (error) {
       console.error(error);
@@ -155,7 +155,7 @@ export function CreateRaffleForm() {
                     <span>Descripción</span>
                     <Button type="button" size="sm" variant="outline" onClick={handleGenerateDescription} disabled={isGenerating}>
                         <Wand2 className="mr-2" />
-                        {isGenerating ? 'Generando...' : 'Generar con IA'}
+                        {isGenerating ? 'Mejorando...' : 'Mejorar con IA'}
                     </Button>
                   </FormLabel>
                   <FormControl>
@@ -166,7 +166,7 @@ export function CreateRaffleForm() {
                     />
                   </FormControl>
                   <FormDescription>
-                    Esta descripción será visible para los participantes.
+                    Escribe una base y luego usa la IA para mejorarla.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
