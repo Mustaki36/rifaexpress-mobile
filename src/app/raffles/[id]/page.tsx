@@ -5,14 +5,17 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { NumberGrid } from "@/components/number-grid";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Tag, Ticket } from "lucide-react";
+import { Clock, Tag, Ticket, Trophy, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRaffles } from "@/context/RaffleContext";
 import { useAuth } from "@/context/AuthContext";
 import { AuthRequiredDialog } from "@/components/auth-required-dialog";
+import { getLotteryInfo, GetLotteryInfoOutput } from "@/ai/flows/get-lottery-info";
+import { CountdownTimer } from "@/components/countdown-timer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function RafflePage() {
   const params = useParams();
@@ -23,7 +26,37 @@ export default function RafflePage() {
   
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [lotteryInfo, setLotteryInfo] = useState<GetLotteryInfoOutput | null>(null);
+  const [isLoadingLottery, setIsLoadingLottery] = useState(false);
+
   const { toast } = useToast();
+
+  const isRaffleSoldOut = useMemo(() => {
+    if (!raffle) return false;
+    return raffle.soldTickets.length >= raffle.totalTickets;
+  }, [raffle]);
+
+  useEffect(() => {
+    if (isRaffleSoldOut && raffle && !lotteryInfo && !isLoadingLottery) {
+        const fetchLotteryInfo = async () => {
+            setIsLoadingLottery(true);
+            try {
+                const info = await getLotteryInfo({ totalTickets: raffle.totalTickets });
+                setLotteryInfo(info);
+            } catch (error) {
+                console.error("Error fetching lottery info:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error de IA",
+                    description: "No se pudo obtener la información del próximo sorteo.",
+                });
+            } finally {
+                setIsLoadingLottery(false);
+            }
+        };
+        fetchLotteryInfo();
+    }
+  }, [isRaffleSoldOut, raffle, lotteryInfo, isLoadingLottery, toast]);
 
   const otherUsersReservedTickets = useMemo(() => {
     return reservedTickets
@@ -91,9 +124,6 @@ export default function RafflePage() {
     
     purchaseTickets(raffle.id, selectedNumbers, user.id);
 
-    // This part is tricky because it crosses contexts.
-    // In a real app, an API call would handle this atomically.
-    // Here, we'll manually update the user in the AuthContext.
     const newTicketRecord = {
         raffleId: raffle.id,
         raffleTitle: raffle.title,
@@ -104,12 +134,10 @@ export default function RafflePage() {
     let updatedTickets = [...user.tickets];
 
     if (existingRaffleIndex > -1) {
-        // User already has tickets for this raffle, add new ones
         const existingRecord = updatedTickets[existingRaffleIndex];
         const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
         updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
     } else {
-        // First time user buys tickets for this raffle
         updatedTickets.push(newTicketRecord);
     }
     
@@ -137,6 +165,11 @@ export default function RafflePage() {
                 className="object-cover"
                 data-ai-hint={raffle.aiHint}
               />
+               {isRaffleSoldOut && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Badge className="text-2xl px-6 py-3 bg-destructive">¡VENDIDA!</Badge>
+                </div>
+              )}
             </div>
             <h1 className="text-3xl md:text-4xl font-bold font-headline mb-4 text-primary">
               {raffle.title}
@@ -145,7 +178,7 @@ export default function RafflePage() {
               <Tag className="h-4 w-4 text-primary"/> <span>Premio: <strong>{raffle.prize}</strong></span>
             </div>
             <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-              <Clock className="h-4 w-4 text-primary"/> <span>Sorteo: <strong>{raffle.drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
+              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{raffle.drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               {raffle.description}
@@ -153,55 +186,83 @@ export default function RafflePage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ticket className="text-primary"/>
-                  Selecciona tus boletos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <NumberGrid
-                  totalTickets={raffle.totalTickets}
-                  soldTickets={raffle.soldTickets}
-                  reservedTickets={otherUsersReservedTickets}
-                  selectedNumbers={selectedNumbers}
-                  onSelectNumber={handleNumberSelect}
-                  pricePerTicket={raffle.ticketPrice}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Resumen de compra</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedNumbers.length > 0 ? (
-                  <>
-                    <div className="mb-4">
-                      <h4 className="font-semibold mb-2">Boletos seleccionados:</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedNumbers.sort((a,b) => a-b).map(num => 
-                          <Badge key={num} variant="secondary" className="text-base">{num.toString().padStart(3, '0')}</Badge>
+            {isRaffleSoldOut ? (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-amber-500"><Trophy />¡Rifa Cerrada!</CardTitle>
+                        <CardDescription>
+                            Todos los boletos han sido vendidos. La cuenta regresiva para el sorteo ha comenzado.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {isLoadingLottery && <p>Obteniendo información del sorteo...</p>}
+                        {lotteryInfo && (
+                            <>
+                                <CountdownTimer targetDate={lotteryInfo.nextDrawDate} />
+                                 <Alert>
+                                    <Info className="h-4 w-4" />
+                                    <AlertTitle>Sorteo Justo y Transparente</AlertTitle>
+                                    <AlertDescription>
+                                        El número ganador de esta rifa será el resultado del próximo sorteo de <strong>{lotteryInfo.lotteryName} de la Lotería de Puerto Rico</strong>. ¡Mucha suerte a todos!
+                                    </AlertDescription>
+                                </Alert>
+                            </>
                         )}
-                      </div>
-                    </div>
-                    <div className="text-2xl font-bold text-primary">
-                        Total: ${totalPrice.toFixed(2)}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground">
-                    Aún no has seleccionado ningún boleto.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            ) : (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Ticket className="text-primary"/>
+                      Selecciona tus boletos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <NumberGrid
+                      totalTickets={raffle.totalTickets}
+                      soldTickets={raffle.soldTickets}
+                      reservedTickets={otherUsersReservedTickets}
+                      selectedNumbers={selectedNumbers}
+                      onSelectNumber={handleNumberSelect}
+                      pricePerTicket={raffle.ticketPrice}
+                    />
+                  </CardContent>
+                </Card>
 
-            <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0}>
-              Comprar Ahora (${totalPrice.toFixed(2)})
-            </Button>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Resumen de compra</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedNumbers.length > 0 ? (
+                      <>
+                        <div className="mb-4">
+                          <h4 className="font-semibold mb-2">Boletos seleccionados:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedNumbers.sort((a,b) => a-b).map(num => 
+                              <Badge key={num} variant="secondary" className="text-base">{num.toString().padStart(3, '0')}</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-2xl font-bold text-primary">
+                            Total: ${totalPrice.toFixed(2)}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        Aún no has seleccionado ningún boleto.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0}>
+                  Comprar Ahora (${totalPrice.toFixed(2)})
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

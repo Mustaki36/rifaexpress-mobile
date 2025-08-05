@@ -12,6 +12,7 @@ export type Raffle = {
   drawDate: Date;
   aiHint: string;
   creatorId: string; // 'admin' or user ID
+  status?: 'open' | 'closed';
 };
 
 export type RaffleResult = {
