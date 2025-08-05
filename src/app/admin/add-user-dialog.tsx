@@ -32,12 +32,14 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
   email: z.string().email("Por favor, introduce un email válido."),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
+  confirmPassword: z.string().min(6, "La confirmación de contraseña debe tener al menos 6 caracteres."),
   phone: z.string().min(8, "El número de teléfono no es válido."),
   role: z.enum(["regular", "creator"]),
   street: z.string().min(5, "La calle debe tener al menos 5 caracteres."),
@@ -45,6 +47,9 @@ const formSchema = z.object({
   state: z.string().min(2, "El estado/provincia debe tener al menos 2 caracteres."),
   postalCode: z.string().min(4, "El código postal no es válido."),
   country: z.string().min(3, "El país debe tener al menos 3 caracteres."),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden.",
+    path: ["confirmPassword"],
 });
 
 interface AddUserDialogProps {
@@ -55,13 +60,15 @@ interface AddUserDialogProps {
 export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   const { toast } = useToast();
   const { addUser } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       email: "",
-      password: "password",
+      password: "",
+      confirmPassword: "",
       phone: "",
       role: "regular",
       street: "",
@@ -74,7 +81,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     try {
-        const { street, city, state, postalCode, country, ...restOfValues } = values;
+        const { street, city, state, postalCode, country, confirmPassword, ...restOfValues } = values;
         const address = { street, city, state, postalCode, country };
         addUser({...restOfValues, address});
         toast({
@@ -132,9 +139,44 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Contraseña Temporal</FormLabel>
-                    <FormControl>
-                    <Input type="password" {...field} />
-                    </FormControl>
+                     <div className="relative">
+                        <FormControl>
+                            <Input type={showPassword ? "text" : "password"} {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowPassword(prev => !prev)}
+                            >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Confirmar Contraseña</FormLabel>
+                    <div className="relative">
+                      <FormControl>
+                        <Input type={showPassword ? "text" : "password"} {...field} />
+                      </FormControl>
+                       <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowPassword(prev => !prev)}
+                        >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                 </FormItem>
                 )}
