@@ -13,13 +13,13 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import crypto from 'crypto';
 
-export const VerifyIdentityInputSchema = z.object({
+const VerifyIdentityInputSchema = z.object({
   userPhotoDataUri: z.string().describe("A photo of the user, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   documentPhotoDataUri: z.string().describe("A photo of the user's ID document, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type VerifyIdentityInput = z.infer<typeof VerifyIdentityInputSchema>;
 
-export const VerifyIdentityOutputSchema = z.object({
+const VerifyIdentityOutputSchema = z.object({
   isVerified: z.boolean().describe('Whether the identity was successfully verified.'),
   isOfAge: z.boolean().describe('Whether the user is determined to be of legal age (18+).'),
   isMatch: z.boolean().describe('Whether the face in the user photo matches the face on the ID document.'),
