@@ -1,3 +1,4 @@
+
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -34,7 +35,7 @@ export function NumberGrid({
 
   return (
     <TooltipProvider delayDuration={100}>
-        <audio ref={audioRef} src="https://u.pcloud.link/publink/show?code=XZINbW5ZbzpjUuW609B7zle24ks0RjAePkEk#returl=https%3A//u.pcloud.link/publink/show%3Fcode%3DXZINbW5ZbzpjUuW609B7zle24ks0RjAePkEk&download=1" preload="auto"></audio>
+        <audio ref={audioRef} src="https://storage.googleapis.com/tfjs-models/demos/rps/coin.mp3" preload="auto"></audio>
       <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-80 overflow-y-auto p-2 bg-muted/50 rounded-md">
         {numbers.map((number) => {
           const isSold = soldTickets.includes(number);
