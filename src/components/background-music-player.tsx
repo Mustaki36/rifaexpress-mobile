@@ -1,50 +1,69 @@
 
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Music, Music2 } from 'lucide-react';
 
 const audioUrl = "https://files.catbox.moe/1mcrli.mp3";
 
 export function BackgroundMusicPlayer() {
-    const audioRef = useRef<HTMLAudioElement>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const hasInteracted = useRef(false);
 
     useEffect(() => {
         // Create audio element programmatically to have more control
         const audio = new Audio(audioUrl);
         audio.loop = true;
-        (audioRef as React.MutableRefObject<HTMLAudioElement>).current = audio;
-
-        const handleCanPlay = () => {
-            console.log("Audio can play through");
-        };
+        audioRef.current = audio;
 
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
 
-        audio.addEventListener('canplaythrough', handleCanPlay);
         audio.addEventListener('play', handlePlay);
         audio.addEventListener('pause', handlePause);
 
         return () => {
-            audio.removeEventListener('canplaythrough', handleCanPlay);
             audio.removeEventListener('play', handlePlay);
             audio.removeEventListener('pause', handlePause);
             audio.pause(); // Clean up audio on component unmount
         };
     }, []);
 
+    const playAudio = useCallback(() => {
+         if (audioRef.current) {
+            audioRef.current.play().catch(error => {
+                // Autoplay was prevented. This is common.
+                // The user needs to interact with the page first.
+                console.warn("Audio play was prevented by browser:", error);
+            });
+        }
+    }, []);
+
+    useEffect(() => {
+        const handleFirstInteraction = () => {
+            if (!hasInteracted.current) {
+                hasInteracted.current = true;
+                playAudio();
+            }
+            window.removeEventListener('click', handleFirstInteraction);
+        };
+
+        window.addEventListener('click', handleFirstInteraction);
+
+        return () => {
+            window.removeEventListener('click', handleFirstInteraction);
+        };
+    }, [playAudio]);
+
+
     const togglePlayPause = () => {
         if (audioRef.current) {
             if (isPlaying) {
                 audioRef.current.pause();
             } else {
-                // Play returns a promise, which can be useful for debugging
-                audioRef.current.play().catch(error => {
-                    console.error("Audio play failed:", error);
-                });
+                playAudio();
             }
         }
     };
