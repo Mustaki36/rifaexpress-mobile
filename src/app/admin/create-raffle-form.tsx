@@ -63,7 +63,7 @@ export function CreateRaffleForm() {
 
   const handleGenerateDescription = async () => {
     const description = form.getValues("description");
-    if (!description) {
+    if (!description || description.trim() === "") {
       toast({
         variant: "destructive",
         title: "Error",
@@ -76,17 +76,22 @@ export function CreateRaffleForm() {
     try {
       const input: GenerateDescriptionInput = { prompt: description };
       const result = await generateDescription(input);
-      form.setValue("description", result.description);
-       toast({
-        title: "Descripción mejorada",
-        description: "La IA ha mejorado tu descripción. ¡Revísala!",
-      });
+      if (result && result.description) {
+        form.setValue("description", result.description);
+        toast({
+            title: "Descripción mejorada",
+            description: "La IA ha mejorado tu descripción. ¡Revísala!",
+        });
+      } else {
+        throw new Error("La respuesta de la IA no contiene una descripción.");
+      }
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "No se pudo generar la descripción.";
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "No se pudo generar la descripción.",
+        title: "Error de IA",
+        description: errorMessage,
       });
     } finally {
         setIsGenerating(false);

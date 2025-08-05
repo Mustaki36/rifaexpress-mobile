@@ -47,6 +47,12 @@ const generateDescriptionFlow = ai.defineFlow({
   inputSchema: GenerateDescriptionInputSchema,
   outputSchema: GenerateDescriptionOutputSchema,
 }, async input => {
+  if (!input.prompt) {
+    throw new Error('El prompt no puede estar vacío.');
+  }
   const {output} = await prompt(input);
-  return output!;
+  if (!output) {
+    throw new Error('La IA no pudo generar una descripción.');
+  }
+  return output;
 });
