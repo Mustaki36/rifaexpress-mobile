@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { NumberGrid } from "@/components/number-grid";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Tag, Ticket, Trophy, Info } from "lucide-react";
+import { Clock, Tag, Ticket, Trophy, Info, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRaffles } from "@/context/RaffleContext";
 import { useAuth } from "@/context/AuthContext";
@@ -199,6 +199,12 @@ export default function RafflePage() {
                         {lotteryInfo && (
                             <>
                                 <CountdownTimer targetDate={lotteryInfo.nextDrawDate} />
+                                <div className="text-center text-muted-foreground font-medium flex items-center justify-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>
+                                    {new Date(lotteryInfo.nextDrawDate).toLocaleString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })}
+                                  </span>
+                                </div>
                                  <Alert>
                                     <Info className="h-4 w-4" />
                                     <AlertTitle>Sorteo Justo y Transparente</AlertTitle>
