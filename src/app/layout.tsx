@@ -7,6 +7,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { RaffleProvider } from '@/context/RaffleContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { ResultsProvider } from '@/context/ResultsContext';
+import { SettingsProvider } from '@/context/SettingsContext';
 
 export const metadata: Metadata = {
   title: 'RifasXpress Mobile',
@@ -33,12 +34,14 @@ export default function RootLayout({
         <AuthProvider>
           <RaffleProvider>
             <ResultsProvider>
+              <SettingsProvider>
                 <div className="relative flex min-h-screen flex-col">
                 <SiteHeader />
                 <main className="flex-1">{children}</main>
                 <SiteFooter />
                 </div>
                 <Toaster />
+              </SettingsProvider>
             </ResultsProvider>
           </RaffleProvider>
         </AuthProvider>

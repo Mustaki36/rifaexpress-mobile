@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -22,6 +23,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { useSettings } from "@/context/SettingsContext";
 
 const formSchema = z
   .object({
@@ -51,11 +55,12 @@ const formSchema = z
   });
 
 
-export function ChangePasswordForm() {
+export function SecuritySettingsForm() {
   const { toast } = useToast();
   // In a real app, you would manage credentials securely on the server.
   const [currentMockPassword, setCurrentMockPassword] = useState("password");
   const [currentMockUsername, setCurrentMockUsername] = useState("admin");
+  const { isVerificationEnabled, setIsVerificationEnabled } = useSettings();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -110,16 +115,45 @@ export function ChangePasswordForm() {
     });
   }
 
+  const handleVerificationToggle = (checked: boolean) => {
+    setIsVerificationEnabled(checked);
+    toast({
+        title: "Ajuste guardado",
+        description: `La verificación de identidad por IA ha sido ${checked ? 'habilitada' : 'deshabilitada'}.`,
+    });
+  }
+
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Seguridad de la Cuenta</CardTitle>
+        <CardTitle>Seguridad y Configuración</CardTitle>
         <CardDescription>
-          Actualiza tu nombre de usuario y contraseña de administrador aquí.
+          Actualiza tus credenciales de administrador y gestiona la configuración de la aplicación.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Form {...form}>
+      <CardContent className="space-y-8">
+        <div>
+            <h3 className="text-lg font-medium">Registro de Usuarios</h3>
+            <div className="flex items-center justify-between rounded-lg border p-4 mt-4">
+                <div className="space-y-0.5">
+                    <FormLabel className="text-base">Verificación de Identidad con IA</FormLabel>
+                    <FormDescription>
+                        Si está activo, los nuevos usuarios deberán verificar su identidad usando su licencia de conducir.
+                    </FormDescription>
+                </div>
+                 <Switch
+                    checked={isVerificationEnabled}
+                    onCheckedChange={handleVerificationToggle}
+                    aria-label="Toggle de verificación de identidad"
+                 />
+            </div>
+        </div>
+
+        <Separator />
+
+        <div>
+         <h3 className="text-lg font-medium mb-4">Credenciales de Administrador</h3>
+         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
@@ -178,6 +212,7 @@ export function ChangePasswordForm() {
             </Button>
           </form>
         </Form>
+        </div>
       </CardContent>
     </Card>
   );

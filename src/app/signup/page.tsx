@@ -23,6 +23,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { verifyIdentity, VerifyIdentityInput } from "@/ai/flows/verify-identity-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useSettings } from "@/context/SettingsContext";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -42,6 +43,7 @@ export default function SignupPage() {
   const { toast } = useToast();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { isVerificationEnabled } = useSettings();
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedUserImage, setCapturedUserImage] = useState<string | null>(null);
   const [licenseImage, setLicenseImage] = useState<string | null>(null);
@@ -49,6 +51,8 @@ export default function SignupPage() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isVerificationEnabled) return;
+
     const getCameraPermission = async () => {
       if (typeof window !== 'undefined' && navigator.mediaDevices) {
         try {
@@ -79,7 +83,7 @@ export default function SignupPage() {
             stream.getTracks().forEach(track => track.stop());
         }
     }
-  }, [toast]);
+  }, [toast, isVerificationEnabled]);
   
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -156,7 +160,7 @@ export default function SignupPage() {
 
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (verificationStatus !== 'success') {
+    if (isVerificationEnabled && verificationStatus !== 'success') {
       toast({
         variant: "destructive",
         title: "Verificación requerida",
@@ -166,7 +170,7 @@ export default function SignupPage() {
     }
     
     try {
-      signup(values.name, values.email, values.password, values.phone, values.address);
+      signup(values.name, values.email, values.password, values.phone, values.address, isVerificationEnabled);
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. ¡Bienvenido!",
@@ -209,6 +213,8 @@ export default function SignupPage() {
             return null;
     }
   }
+
+  const isSubmitDisabled = isVerificationEnabled && verificationStatus !== 'success';
 
   return (
     <div className="container flex items-center justify-center py-12">
@@ -290,43 +296,45 @@ export default function SignupPage() {
                   )}
                 />
 
-                <Card className="bg-muted/50">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><UserCheck />Verificación de Identidad</CardTitle>
-                        <CardDescription>Para cumplir con la normativa, necesitamos verificar tu identidad y mayoría de edad.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                           <div>
-                                <FormLabel>1. Tu rostro</FormLabel>
-                                <div className="relative mt-2 aspect-video w-full bg-secondary rounded-md overflow-hidden border">
-                                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                                    {hasCameraPermission === false && <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white p-4 text-center">La cámara no está disponible. Revisa los permisos.</div>}
-                                    {capturedUserImage && <img src={capturedUserImage} alt="Usuario capturado" className="absolute inset-0 w-full h-full object-cover" />}
-                                </div>
-                                <Button type="button" onClick={handleCaptureUserImage} disabled={!hasCameraPermission} className="w-full mt-2">
-                                    <Camera className="mr-2" /> {capturedUserImage ? 'Tomar otra foto' : 'Tomar foto'}
-                                </Button>
-                           </div>
-                           <div>
-                                <FormLabel>2. Tu licencia de conducir</FormLabel>
-                                <div className="mt-2 aspect-video w-full bg-secondary rounded-md border flex items-center justify-center overflow-hidden">
-                                   {licenseImage ? (
-                                        <img src={licenseImage} alt="Licencia subida" className="w-full h-full object-contain" />
-                                   ) : (
-                                        <span className="text-sm text-muted-foreground p-4 text-center">Sube una foto clara del frente de tu licencia</span>
-                                   )}
-                                </div>
-                                <Input id="license-upload" type="file" accept="image/*" onChange={handleLicenseUpload} className="mt-2 file:text-primary file:font-bold" />
-                           </div>
-                        </div>
-                        <Button type="button" onClick={handleVerifyIdentity} disabled={!capturedUserImage || !licenseImage || verificationStatus === 'verifying' || verificationStatus === 'success'} className="w-full">
-                            {verificationStatus === 'verifying' && <Loader2 className="mr-2 animate-spin" />}
-                            {verificationStatus === 'success' ? <><CheckCircle2 className="mr-2"/> Verificado</> : 'Verificar Identidad con IA'}
-                        </Button>
-                        <VerificationStatusAlert />
-                    </CardContent>
-                </Card>
+                {isVerificationEnabled && (
+                  <Card className="bg-muted/50">
+                      <CardHeader>
+                          <CardTitle className="flex items-center gap-2"><UserCheck />Verificación de Identidad</CardTitle>
+                          <CardDescription>Para cumplir con la normativa, necesitamos verificar tu identidad y mayoría de edad.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                            <div>
+                                  <FormLabel>1. Tu rostro</FormLabel>
+                                  <div className="relative mt-2 aspect-video w-full bg-secondary rounded-md overflow-hidden border">
+                                      <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                                      {hasCameraPermission === false && <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white p-4 text-center">La cámara no está disponible. Revisa los permisos.</div>}
+                                      {capturedUserImage && <img src={capturedUserImage} alt="Usuario capturado" className="absolute inset-0 w-full h-full object-cover" />}
+                                  </div>
+                                  <Button type="button" onClick={handleCaptureUserImage} disabled={!hasCameraPermission} className="w-full mt-2">
+                                      <Camera className="mr-2" /> {capturedUserImage ? 'Tomar otra foto' : 'Tomar foto'}
+                                  </Button>
+                            </div>
+                            <div>
+                                  <FormLabel>2. Tu licencia de conducir</FormLabel>
+                                  <div className="mt-2 aspect-video w-full bg-secondary rounded-md border flex items-center justify-center overflow-hidden">
+                                    {licenseImage ? (
+                                          <img src={licenseImage} alt="Licencia subida" className="w-full h-full object-contain" />
+                                    ) : (
+                                          <span className="text-sm text-muted-foreground p-4 text-center">Sube una foto clara del frente de tu licencia</span>
+                                    )}
+                                  </div>
+                                  <Input id="license-upload" type="file" accept="image/*" onChange={handleLicenseUpload} className="mt-2 file:text-primary file:font-bold" />
+                            </div>
+                          </div>
+                          <Button type="button" onClick={handleVerifyIdentity} disabled={!capturedUserImage || !licenseImage || verificationStatus === 'verifying' || verificationStatus === 'success'} className="w-full">
+                              {verificationStatus === 'verifying' && <Loader2 className="mr-2 animate-spin" />}
+                              {verificationStatus === 'success' ? <><CheckCircle2 className="mr-2"/> Verificado</> : 'Verificar Identidad con IA'}
+                          </Button>
+                          <VerificationStatusAlert />
+                      </CardContent>
+                  </Card>
+                )}
 
                 <FormField
                     control={form.control}
@@ -349,7 +357,7 @@ export default function SignupPage() {
                     )}
                   />
 
-              <Button type="submit" className="w-full" disabled={verificationStatus !== 'success'}>
+              <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
                 Crear Cuenta
               </Button>
             </form>

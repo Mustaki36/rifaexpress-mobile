@@ -6,7 +6,7 @@ import { CreateRaffleForm } from "./create-raffle-form";
 import { RafflesList } from "./raffles-list";
 import { Ticket, ListOrdered, Shield, LogOut, History } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
-import { ChangePasswordForm } from "./change-password-form";
+import { SecuritySettingsForm } from "./security-settings-form";
 import { Button } from "@/components/ui/button";
 import { HistoryList } from "./history-list";
 
@@ -72,7 +72,7 @@ export default function AdminPage() {
             <HistoryList />
         </TabsContent>
          <TabsContent value="security">
-            <ChangePasswordForm />
+            <SecuritySettingsForm />
         </TabsContent>
       </Tabs>
     </div>

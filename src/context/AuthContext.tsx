@@ -13,7 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, pass: string) => boolean;
   logout: () => void;
-  signup: (name: string, email: string, pass: string, phone: string, address: string) => void;
+  signup: (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUser(null);
   };
 
-  const signup = (name: string, email: string, pass: string, phone: string, address: string) => {
+  const signup = (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean) => {
     if (users.some(u => u.email === email)) {
       throw new Error("El email ya está registrado.");
     }
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       phone,
       address,
-      isVerified: true, // Set to true after successful AI verification
+      isVerified,
       avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
       tickets: [],
       // In a real app, you would hash the password
