@@ -26,8 +26,9 @@ export function NumberGrid({
   const handleSelect = (number: number) => {
     onSelectNumber(number);
     // Play sound only when selecting, not deselecting
-    if (!selectedNumbers.includes(number)) {
-      audioRef.current?.play();
+    if (!selectedNumbers.includes(number) && audioRef.current) {
+      audioRef.current.load();
+      audioRef.current.play();
     }
   }
 
