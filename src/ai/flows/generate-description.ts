@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
   Based on the following prompt, generate a description for the raffle that will attract more participants.
 
   Prompt: {{{prompt}}}
-  Description:`, // Removed extra newline
+  Description:`,
 });
 
 const generateDescriptionFlow = ai.defineFlow({
