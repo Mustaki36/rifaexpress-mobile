@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from "next/image";
@@ -11,10 +12,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Clock, Ticket } from "lucide-react";
+import { Clock, Ticket, BadgeCheck } from "lucide-react";
 import type { Raffle } from "@/lib/types";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
+import { Badge } from "./ui/badge";
 
 interface RaffleCardProps {
   raffle: Raffle;
@@ -22,6 +24,7 @@ interface RaffleCardProps {
 
 export function RaffleCard({ raffle }: RaffleCardProps) {
   const progress = (raffle.soldTickets.length / raffle.totalTickets) * 100;
+  const isSoldOut = progress >= 100;
 
   const timeRemaining = formatDistanceToNow(raffle.drawDate, {
     addSuffix: true,
@@ -40,6 +43,9 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
               className="object-cover"
               data-ai-hint={raffle.aiHint}
             />
+             {isSoldOut && (
+                <Badge className="absolute top-2 right-2 text-md px-3 py-1 bg-destructive">¡VENDIDA!</Badge>
+              )}
           </div>
         </Link>
         <div className="p-6 pb-2">
@@ -72,10 +78,10 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
           <Clock className="mr-2 h-4 w-4" />
           <span>Sorteo {timeRemaining}</span>
         </div>
-        <Button asChild className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+        <Button asChild className="w-full bg-accent hover:bg-accent/90 text-accent-foreground disabled:bg-destructive disabled:opacity-100" disabled={isSoldOut}>
           <Link href={`/raffles/${raffle.id}`}>
-            <Ticket className="mr-2 h-4 w-4" />
-            Comprar Boletos
+            {isSoldOut ? <BadgeCheck className="mr-2 h-4 w-4" /> : <Ticket className="mr-2 h-4 w-4" />}
+            {isSoldOut ? '¡VENDIDA!' : 'Comprar Boletos'}
           </Link>
         </Button>
       </CardFooter>
