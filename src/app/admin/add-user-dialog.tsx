@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -102,13 +103,14 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Añadir Nuevo Usuario</DialogTitle>
           <DialogDescription>
             Completa los datos para registrar un nuevo usuario en el sistema.
           </DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[70vh] pr-6 -mr-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -275,7 +277,8 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                     )}
                 />
             </div>
-            <DialogFooter className="sticky bottom-0 bg-background pt-4 -mx-6 px-6 pb-6">
+            
+             <DialogFooter className="sticky bottom-0 bg-background pt-4 -mx-6 px-6 pb-0">
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancelar</Button>
                 </DialogClose>
@@ -286,7 +289,9 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
             </DialogFooter>
           </form>
         </Form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
 }
+
