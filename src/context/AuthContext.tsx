@@ -162,6 +162,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
     
+    // In a real app, this should be a Cloud Function that uses the Admin SDK.
+    // We are simulating this by adding the user to Firestore directly.
+    // The user will not be able to log in until an admin sets up their Auth account.
     console.warn(`Simulating Auth creation for ${userData.email}. In production, use a Cloud Function with the Admin SDK to create the user in Firebase Auth.`);
 
     try {
@@ -176,11 +179,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           tickets: [],
           mustChangePassword: true,
           password: userData.password,
-          createdAt: serverTimestamp(),
+          createdAt: new Date(),
         };
 
-        await addDoc(collection(db, "users"), newUserProfileData);
-        await fetchAllUsers();
+        const docRef = await addDoc(collection(db, "users"), {
+            ...newUserProfileData,
+            createdAt: serverTimestamp()
+        });
+
+        // Add the new user to the local state to force UI update
+        setAllUsers(prevUsers => [...prevUsers, { id: docRef.id, ...newUserProfileData }]);
+
 
     } catch (error) {
         console.error("Error creating user in Firestore:", error);
@@ -215,7 +224,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // In a real app, this would be a Cloud Function that also deletes the Firebase Auth user.
     console.warn(`Deleting user ${userId} from Firestore only. The Auth user still exists.`);
     await deleteDoc(doc(db, "users", userId));
-    await fetchAllUsers();
+    setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
   }
 
 
