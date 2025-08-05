@@ -89,7 +89,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Añadir Nuevo Usuario</DialogTitle>
           <DialogDescription>
@@ -213,7 +213,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                     )}
                 />
             </div>
-            <DialogFooter>
+            <DialogFooter className="sticky bottom-0 bg-background pt-4 -mx-6 px-6 pb-6">
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancelar</Button>
                 </DialogClose>

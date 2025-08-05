@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -107,146 +108,152 @@ export function EditUserSheet({ user, onOpenChange }: EditUserSheetProps) {
 
   return (
     <Sheet open={!!user} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md">
+      <SheetContent className="sm:max-w-md flex flex-col">
         <SheetHeader>
           <SheetTitle>Editar Usuario</SheetTitle>
           <SheetDescription>
             Actualiza los datos del usuario. Los cambios se guardarán inmediatamente.
           </SheetDescription>
         </SheetHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-             <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
+        <ScrollArea className="flex-grow pr-6 -mr-6">
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
                 control={form.control}
-                name="phone"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Teléfono</FormLabel>
-                    <FormControl>
-                    <Input {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rol</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="regular">Regular</SelectItem>
-                      <SelectItem value="creator">Creador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <h4 className="font-medium text-sm pt-2">Dirección</h4>
-             <FormField
-                control={form.control}
-                name="street"
+                name="name"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel className="text-xs text-muted-foreground">Calle</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormLabel>Nombre</FormLabel>
+                    <FormControl>
+                        <Input {...field} />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
-            />
-             <div className="grid grid-cols-2 gap-2">
+                />
+                <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                        <Input type="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
                 <FormField
                     control={form.control}
-                    name="city"
+                    name="phone"
                     render={({ field }) => (
-                        <FormItem>
-                         <FormLabel className="text-xs text-muted-foreground">Ciudad</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                    <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
+                        <FormControl>
+                        <Input {...field} />
+                        </FormControl>
                         <FormMessage />
-                        </FormItem>
+                    </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="state"
-                    render={({ field }) => (
-                        <FormItem>
-                         <FormLabel className="text-xs text-muted-foreground">Estado</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Rol</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        <SelectItem value="regular">Regular</SelectItem>
+                        <SelectItem value="creator">Creador</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
                 />
-            </div>
-             <div className="grid grid-cols-2 gap-2">
+                <h4 className="font-medium text-sm pt-2">Dirección</h4>
                 <FormField
                     control={form.control}
-                    name="postalCode"
+                    name="street"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel className="text-xs text-muted-foreground">Código Postal</FormLabel>
+                        <FormLabel className="text-xs text-muted-foreground">Calle</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
                 />
-                 <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel className="text-xs text-muted-foreground">País</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            </div>
-            <SheetFooter className="pt-4">
-                <SheetClose asChild>
-                    <Button type="button" variant="secondary">Cancelar</Button>
-                </SheetClose>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                   {form.formState.isSubmitting && <Loader2 className="mr-2 animate-spin" />}
-                   Guardar Cambios
-                </Button>
-            </SheetFooter>
-          </form>
-        </Form>
+                <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">Ciudad</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">Estado</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                        control={form.control}
+                        name="postalCode"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">Código Postal</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">País</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                {/* This empty div is a spacer to push the footer down */}
+                <div className="pt-4" /> 
+
+                <SheetFooter className="pt-4 bg-background sticky bottom-0 -mx-6 px-6 pb-2 -mb-2">
+                    <SheetClose asChild>
+                        <Button type="button" variant="secondary">Cancelar</Button>
+                    </SheetClose>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting && <Loader2 className="mr-2 animate-spin" />}
+                    Guardar Cambios
+                    </Button>
+                </SheetFooter>
+            </form>
+            </Form>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );
