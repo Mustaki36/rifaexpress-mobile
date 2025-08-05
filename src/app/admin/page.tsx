@@ -4,12 +4,17 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateRaffleForm } from "./create-raffle-form";
 import { RafflesList } from "./raffles-list";
-import { Ticket, ListOrdered, Shield } from "lucide-react";
+import { Ticket, ListOrdered, Shield, LogOut } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
 import { ChangePasswordForm } from "./change-password-form";
+import { Button } from "@/components/ui/button";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+  };
 
   if (!isAuthenticated) {
     return <AdminLoginForm onLoginSuccess={() => setIsAuthenticated(true)} />;
@@ -17,6 +22,17 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+       <div className="relative">
+         <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout} 
+            className="absolute top-0 right-0"
+          >
+           <LogOut className="mr-2 h-4 w-4" />
+           Cerrar Sesión
+         </Button>
+      </div>
       <section className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4 text-primary">
           Panel de Administración
