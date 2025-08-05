@@ -41,7 +41,7 @@ const formSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
   confirmPassword: z.string().min(6, "La confirmación de contraseña debe tener al menos 6 caracteres."),
   phone: z.string().min(8, "El número de teléfono no es válido."),
-  role: z.enum(["regular", "creator"]),
+  role: z.enum(["regular", "creator", "admin"]),
   street: z.string().min(5, "La calle debe tener al menos 5 caracteres."),
   city: z.string().min(3, "La ciudad debe tener al menos 3 caracteres."),
   state: z.string().min(2, "El estado/provincia debe tener al menos 2 caracteres."),
@@ -209,6 +209,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                     <SelectContent>
                       <SelectItem value="regular">Regular</SelectItem>
                       <SelectItem value="creator">Creador</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
