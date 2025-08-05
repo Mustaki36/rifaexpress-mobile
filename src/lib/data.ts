@@ -97,6 +97,7 @@ export const MOCK_USER: UserProfile = {
   },
   avatar: 'https://placehold.co/100x100.png',
   role: 'creator',
+  createdAt: new Date('2024-01-15T10:30:00'),
   tickets: [
     {
       raffleId: 'car-2024',

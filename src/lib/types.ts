@@ -40,6 +40,7 @@ export type UserProfile = {
   isVerified: boolean;
   avatar: string;
   role: 'regular' | 'creator';
+  createdAt: Date;
   tickets: {
     raffleId: string;
     raffleTitle: string;

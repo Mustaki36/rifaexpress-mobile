@@ -98,6 +98,7 @@ export default function SignupPage() {
       postalCode: "",
       country: "",
       verificationCode: "",
+      role: "regular",
       isOfAge: false,
     },
   });

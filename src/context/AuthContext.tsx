@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import { useBlock } from './BlockContext';
 
 // This is a mock user database. In a real application, this would be a database.
-const users: UserProfile[] = [MOCK_USER];
+const initialUsers: UserProfile[] = [MOCK_USER];
 
 // This is a mock verification code store. In a real app, use a DB or a service like Redis.
 const verificationStore = new Map<string, VerificationInfo>();
@@ -15,6 +15,7 @@ const verificationStore = new Map<string, VerificationInfo>();
 
 interface AuthContextType {
   user: UserProfile | null;
+  allUsers: UserProfile[];
   isAuthenticated: boolean;
   login: (email: string, pass: string) => boolean;
   logout: () => void;
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>(initialUsers);
   const { blockedUsers, blockUser } = useBlock();
 
   const isEmailBlocked = (email: string) => {
@@ -121,10 +123,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role,
       avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
       tickets: [],
+      createdAt: new Date(),
       // In a real app, you would hash the password
     };
 
-    users.push(newUser);
+    setUsers(prevUsers => [...prevUsers, newUser]);
     verificationStore.delete(email); // Clean up verification code after successful signup
     // Automatically log in the new user
     // NOTE: We are using "password" as a mock password for all users
@@ -133,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, isAuthenticated: !!currentUser, login, logout, signup, requestVerificationCode, verifyCode, isEmailBlocked }}>
+    <AuthContext.Provider value={{ user: currentUser, allUsers: users, isAuthenticated: !!currentUser, login, logout, signup, requestVerificationCode, verifyCode, isEmailBlocked }}>
       {children}
     </AuthContext.Provider>
   );
