@@ -1,3 +1,4 @@
+
 import type { Timestamp } from "firebase/firestore";
 
 export type Raffle = {
@@ -13,7 +14,7 @@ export type Raffle = {
   aiHint: string;
   creatorId: string; // user ID
   status?: 'open' | 'closed';
-  createdAt: Timestamp;
+  createdAt?: Timestamp;
 };
 
 export type RaffleResult = {
@@ -59,8 +60,9 @@ export type VerificationInfo = {
 };
 
 export type BlockedUser = {
+  id: string;
   email: string;
-  blockedAt: Date;
+  blockedAt: Date | Timestamp;
   reason: string;
   notes: string;
 };
