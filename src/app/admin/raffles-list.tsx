@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -37,14 +38,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { Raffle } from "@/lib/types";
 import { useRaffles } from "@/context/RaffleContext";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function RafflesList() {
   const { toast } = useToast();
   const { raffles, deleteRaffle } = useRaffles();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [raffleToDelete, setRaffleToDelete] = useState<string | null>(null);
+  const [selectedRaffles, setSelectedRaffles] = useState<string[]>([]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRaffles(raffles.map((r) => r.id));
+    } else {
+      setSelectedRaffles([]);
+    }
+  };
+
+  const handleSelectRow = (raffleId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRaffles((prev) => [...prev, raffleId]);
+    } else {
+      setSelectedRaffles((prev) => prev.filter((id) => id !== raffleId));
+    }
+  };
 
   const handleSelectWinner = (raffleId: string) => {
     toast({
@@ -79,29 +97,59 @@ export function RafflesList() {
   const handleDelete = () => {
     if (raffleToDelete) {
       deleteRaffle(raffleToDelete);
+      setSelectedRaffles(prev => prev.filter(id => id !== raffleToDelete));
       toast({
         title: "Rifa eliminada",
         description: "La rifa ha sido eliminada exitosamente.",
       });
+    } else if (selectedRaffles.length > 0) {
+        selectedRaffles.forEach(id => deleteRaffle(id));
+        toast({
+            title: `${selectedRaffles.length} rifas eliminadas`,
+            description: "Las rifas seleccionadas han sido eliminadas."
+        });
+        setSelectedRaffles([]);
     }
     setIsAlertOpen(false);
     setRaffleToDelete(null);
   };
 
+  const confirmDeleteSelected = () => {
+    if (selectedRaffles.length > 0) {
+      setRaffleToDelete(null);
+      setIsAlertOpen(true);
+    }
+  }
+
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle>Gestionar Rifas</CardTitle>
-          <CardDescription>
-            Visualiza, edita y selecciona ganadores para tus rifas.
-          </CardDescription>
+        <CardHeader className="flex-row items-center justify-between">
+          <div>
+            <CardTitle>Gestionar Rifas</CardTitle>
+            <CardDescription>
+              Visualiza, edita y selecciona ganadores para tus rifas.
+            </CardDescription>
+          </div>
+          {selectedRaffles.length > 0 && (
+            <Button variant="destructive" onClick={confirmDeleteSelected}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar ({selectedRaffles.length})
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead padding="checkbox" className="w-12">
+                    <Checkbox
+                      checked={selectedRaffles.length > 0 && selectedRaffles.length === raffles.length}
+                      onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
+                      aria-label="Seleccionar todo"
+                    />
+                  </TableHead>
                   <TableHead>Rifa</TableHead>
                   <TableHead>Premio</TableHead>
                   <TableHead className="text-center">Progreso</TableHead>
@@ -112,8 +160,16 @@ export function RafflesList() {
                 {raffles.map((raffle) => {
                   const progress =
                     (raffle.soldTickets.length / raffle.totalTickets) * 100;
+                  const isSelected = selectedRaffles.includes(raffle.id);
                   return (
-                    <TableRow key={raffle.id}>
+                    <TableRow key={raffle.id} data-state={isSelected ? "selected" : ""}>
+                       <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleSelectRow(raffle.id, Boolean(checked))}
+                          aria-label={`Seleccionar rifa ${raffle.title}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         {raffle.title}
                       </TableCell>
@@ -183,3 +239,4 @@ export function RafflesList() {
     </>
   );
 }
+
