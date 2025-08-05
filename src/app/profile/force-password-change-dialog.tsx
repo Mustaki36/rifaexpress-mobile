@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 
 const formSchema = z.object({
     currentPassword: z.string().min(1, "La contraseña actual es requerida."),
@@ -39,6 +40,8 @@ const formSchema = z.object({
 export function ForcePasswordChangeDialog() {
   const { user, forcePasswordChange } = useAuth();
   const { toast } = useToast();
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -93,9 +96,20 @@ export function ForcePasswordChangeDialog() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Contraseña Actual</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
+                  <div className="relative">
+                    <FormControl>
+                        <Input type={showCurrentPassword ? "text" : "password"} {...field} />
+                    </FormControl>
+                     <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                        onClick={() => setShowCurrentPassword(prev => !prev)}
+                        >
+                        {showCurrentPassword ? <EyeOff /> : <Eye />}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -106,9 +120,20 @@ export function ForcePasswordChangeDialog() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nueva Contraseña</FormLabel>
-                  <FormControl>
-                     <Input type="password" {...field} />
-                  </FormControl>
+                   <div className="relative">
+                        <FormControl>
+                            <Input type={showNewPassword ? "text" : "password"} {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowNewPassword(prev => !prev)}
+                            >
+                            {showNewPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -119,9 +144,20 @@ export function ForcePasswordChangeDialog() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Confirmar Nueva Contraseña</FormLabel>
-                  <FormControl>
-                     <Input type="password" {...field} />
-                  </FormControl>
+                   <div className="relative">
+                        <FormControl>
+                            <Input type={showNewPassword ? "text" : "password"} {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowNewPassword(prev => !prev)}
+                            >
+                            {showNewPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                   <FormMessage />
                 </FormItem>
               )}

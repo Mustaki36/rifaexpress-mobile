@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -26,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useSettings } from "@/context/SettingsContext";
+import { Eye, EyeOff } from "lucide-react";
 
 const formSchema = z
   .object({
@@ -61,6 +63,9 @@ export function SecuritySettingsForm() {
   const [currentMockPassword, setCurrentMockPassword] = useState("password");
   const [currentMockUsername, setCurrentMockUsername] = useState("admin");
   const { isVerificationEnabled, setIsVerificationEnabled } = useSettings();
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -174,9 +179,20 @@ export function SecuritySettingsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Contraseña Actual (requerida para cualquier cambio)</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                            <Input type={showCurrentPassword ? "text" : "password"} {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowCurrentPassword(prev => !prev)}
+                            >
+                            {showCurrentPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -187,9 +203,20 @@ export function SecuritySettingsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nueva Contraseña (opcional)</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                            <Input type={showNewPassword ? "text" : "password"} {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowNewPassword(prev => !prev)}
+                            >
+                            {showNewPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -200,9 +227,20 @@ export function SecuritySettingsForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Confirmar Nueva Contraseña</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
+                    <div className="relative">
+                        <FormControl>
+                            <Input type={showNewPassword ? "text" : "password"} {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowNewPassword(prev => !prev)}
+                            >
+                            {showNewPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -22,8 +22,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
 
 const formSchema = z.object({
   email: z.string().email("Debe ser un email válido."),
@@ -33,6 +34,7 @@ const formSchema = z.object({
 export function AdminLoginForm() {
   const { toast } = useToast();
   const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -95,9 +97,20 @@ export function AdminLoginForm() {
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Contraseña</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
+                     <div className="relative">
+                        <FormControl>
+                           <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                            onClick={() => setShowPassword(prev => !prev)}
+                            >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                     <FormMessage />
                     </FormItem>
                 )}
