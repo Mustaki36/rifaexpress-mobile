@@ -12,7 +12,7 @@ export function SiteFooter() {
         </div>
         <div className="flex flex-col gap-2">
           <p className="text-sm font-semibold text-primary">
-            Aquí se viene a ganar. Y a divertirse, claro.
+            Tu próxima gran victoria empieza aquí.
           </p>
         </div>
       </div>
