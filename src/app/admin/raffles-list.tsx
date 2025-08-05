@@ -46,7 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { Raffle } from "@/lib/types";
 
-type SortOption = "recent" | "oldest" | "highest_progress" | "lowest_progress";
+type SortOption = "recent" | "oldest" | "highest_progress" | "lowest_progress" | "price_asc" | "price_desc";
 
 export function RafflesList() {
   const { toast } = useToast();
@@ -75,6 +75,12 @@ export function RafflesList() {
         break;
       case "lowest_progress":
         filtered.sort((a, b) => (a.soldTickets.length / a.totalTickets) - (b.soldTickets.length / b.totalTickets));
+        break;
+      case "price_asc":
+        filtered.sort((a, b) => a.ticketPrice - b.ticketPrice);
+        break;
+      case "price_desc":
+        filtered.sort((a, b) => b.ticketPrice - a.ticketPrice);
         break;
     }
 
@@ -190,6 +196,8 @@ export function RafflesList() {
                           <DropdownMenuRadioItem value="oldest">Más Antiguas</DropdownMenuRadioItem>
                           <DropdownMenuRadioItem value="highest_progress">Mayor Progreso</DropdownMenuRadioItem>
                           <DropdownMenuRadioItem value="lowest_progress">Menor Progreso</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="price_desc">Más Caro</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="price_asc">Más Barato</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -305,3 +313,5 @@ export function RafflesList() {
     </>
   );
 }
+
+    
