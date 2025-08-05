@@ -35,11 +35,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const requestVerificationCode = (email: string): Promise<void> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       // Simulate network delay
       setTimeout(() => {
         if (isEmailBlocked(email)) {
-          throw new Error("Este email ha sido bloqueado.");
+          reject(new Error("Este email ha sido bloqueado."));
+          return;
         }
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 60 * 1000); // 1 minute expiry
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Check code
     if (info.code === code) {
-      verificationStore.delete(email); // Clean up on success
+      // Do not delete on success, in case user submits form later
       return true;
     }
 
@@ -124,6 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     users.push(newUser);
+    verificationStore.delete(email); // Clean up verification code after successful signup
     // Automatically log in the new user
     // NOTE: We are using "password" as a mock password for all users
     login(email, "password"); 
@@ -144,3 +146,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

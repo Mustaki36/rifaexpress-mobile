@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock, Users, User } from "lucide-react";
+import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock, Users, User, BadgeCheck } from "lucide-react";
 import React, { useRef, useState, useEffect } from 'react';
 import { verifyIdentity, VerifyIdentityInput } from "@/ai/flows/verify-identity-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -58,16 +58,20 @@ export default function SignupPage() {
   const [codeSent, setCodeSent] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  
+  const [isCodeVerified, setIsCodeVerified] = useState(false);
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else {
-      setCodeSent(false);
+    } else if (codeSent) {
+      // Allow sending new code once countdown finishes
+      // setCodeSent(false); 
     }
     return () => clearTimeout(timer);
-  }, [countdown]);
+  }, [countdown, codeSent]);
   
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -203,12 +207,44 @@ export default function SignupPage() {
       });
       setCodeSent(true);
       setCountdown(60);
+      setIsCodeVerified(false); // Reset verification status on new code
     } catch (error) {
        if (error instanceof Error) {
         toast({ variant: "destructive", title: "Error", description: error.message });
       }
     } finally {
       setIsSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    const email = form.getValues("email");
+    const code = form.getValues("verificationCode");
+
+    if (!code || code.length !== 6) {
+      toast({ variant: "destructive", title: "Código inválido", description: "El código debe tener 6 dígitos." });
+      return;
+    }
+
+    setIsVerifyingCode(true);
+    try {
+      // Simulate network delay
+      await new Promise(res => setTimeout(res, 500));
+      const isCodeValid = verifyCode(email, code);
+
+      if (isCodeValid) {
+        setIsCodeVerified(true);
+        toast({ title: "Código verificado", description: "El código de verificación es correcto." });
+      } else {
+        setIsCodeVerified(false);
+        toast({ variant: "destructive", title: "Código incorrecto", description: "El código de verificación no es válido. Inténtalo de nuevo." });
+      }
+    } catch (error) {
+       if (error instanceof Error) {
+         toast({ variant: "destructive", title: "Error", description: error.message });
+       }
+    } finally {
+      setIsVerifyingCode(false);
     }
   };
 
@@ -223,18 +259,12 @@ export default function SignupPage() {
       return;
     }
 
-    if (!values.verificationCode) {
-       toast({ variant: "destructive", title: "Código requerido", description: "Por favor, introduce el código de verificación enviado a tu email." });
+    if (!isCodeVerified) {
+       toast({ variant: "destructive", title: "Código no verificado", description: "Por favor, verifica tu código de email antes de continuar." });
        return;
     }
     
     try {
-      const isCodeValid = verifyCode(values.email, values.verificationCode);
-      if (!isCodeValid) {
-         toast({ variant: "destructive", title: "Código incorrecto", description: "El código de verificación no es válido. Inténtalo de nuevo." });
-         return;
-      }
-
       signup(values.name, values.email, values.password, values.phone, values.address, isVerificationEnabled, values.role);
       toast({
         title: "¡Cuenta Creada!",
@@ -279,7 +309,7 @@ export default function SignupPage() {
     }
   }
 
-  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || isEmailBlocked(emailValue);
+  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || !isCodeVerified || isEmailBlocked(emailValue);
 
   return (
     <div className="container flex items-center justify-center py-12">
@@ -379,24 +409,33 @@ export default function SignupPage() {
                      <FormLabel>Verificación de Email</FormLabel>
                      <Button type="button" onClick={handleRequestCode} disabled={countdown > 0 || isSendingCode || !emailValue || !!form.getFieldState("email").error} className="w-full">
                         {isSendingCode ? <Loader2 className="mr-2 animate-spin" /> : <Send className="mr-2" />}
-                        {countdown > 0 ? `Reenviar en ${countdown}s` : "Enviar código"}
+                        {codeSent && countdown > 0 ? `Reenviar en ${countdown}s` : "Enviar código"}
                      </Button>
                    </div>
                 </div>
 
-                 <FormField
-                  control={form.control}
-                  name="verificationCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Código de Verificación</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Introduce el código de 6 dígitos" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    <FormField
+                      control={form.control}
+                      name="verificationCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Código de Verificación</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Introduce el código de 6 dígitos" {...field} disabled={isCodeVerified} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="space-y-2">
+                       <FormLabel className="opacity-0 hidden md:block">Confirmar</FormLabel>
+                       <Button type="button" onClick={handleVerifyCode} disabled={!codeSent || isVerifyingCode || isCodeVerified} className="w-full">
+                          {isVerifyingCode && <Loader2 className="mr-2 animate-spin" />}
+                          {isCodeVerified ? <><BadgeCheck className="mr-2"/> Verificado</> : 'Verificar Código'}
+                       </Button>
+                    </div>
+                 </div>
 
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -508,3 +547,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    
