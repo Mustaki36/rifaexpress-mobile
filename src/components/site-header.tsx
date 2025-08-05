@@ -17,6 +17,7 @@ import {
 } from "./ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BackgroundMusicPlayer } from "./background-music-player";
 
 export function SiteHeader() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -46,6 +47,7 @@ export function SiteHeader() {
         <div className="flex flex-1 items-center justify-end space-x-4">
           <MainNav />
           <nav className="flex items-center space-x-2">
+            <BackgroundMusicPlayer />
             {isClient && (
               <>
                 {isAuthenticated && user && user.role !== 'admin' ? (
