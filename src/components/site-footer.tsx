@@ -11,7 +11,7 @@ export function SiteFooter() {
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
-          Aquí se viene a ganar. Y a divertirse, claro.
+          Donde cada boleto es una nueva oportunidad.
         </p>
       </div>
     </footer>
