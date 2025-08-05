@@ -21,7 +21,7 @@ export function NumberGrid({
   pricePerTicket,
 }: NumberGridProps) {
   const numbers = Array.from({ length: totalTickets }, (_, i) => i + 1);
-  const audioUrl = "https://storage.googleapis.com/tfjs-models/demos/rps/coin.mp3";
+  const audioUrl = "https://files.catbox.moe/gdq4uf.mp3";
 
   const handleSelect = (number: number) => {
     onSelectNumber(number);
