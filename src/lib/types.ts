@@ -11,7 +11,7 @@ export type Raffle = {
   soldTickets: number[];
   drawDate: Date;
   aiHint: string;
-  creatorId: string; // 'admin' or user ID
+  creatorId: string; // user ID
   status?: 'open' | 'closed';
 };
 
@@ -41,7 +41,7 @@ export type UserProfile = {
   address?: Address;
   isVerified: boolean;
   avatar: string;
-  role: 'regular' | 'creator';
+  role: 'regular' | 'creator' | 'admin';
   createdAt: Date;
   mustChangePassword?: boolean;
   tickets: {

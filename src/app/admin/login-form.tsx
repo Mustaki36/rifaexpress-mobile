@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const formSchema = z.object({
   username: z.string().min(1, "El nombre de usuario es requerido."),
@@ -35,6 +36,7 @@ interface AdminLoginFormProps {
 
 export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   const { toast } = useToast();
+  const { login } = useAuth();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,9 +47,11 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // IMPORTANT: This is a mock login for demonstration purposes.
-    // In a real application, you should use a secure authentication service.
-    if (values.username === "admin" && values.password === "password") {
+    // IMPORTANT: This now uses the main login system.
+    // The default admin email is 'admin@rifasxpress.com' and password is 'password'.
+    const success = login(values.username, values.password);
+
+    if (success) {
        toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión como administrador.",
@@ -82,9 +86,9 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
                 name="username"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Usuario</FormLabel>
+                    <FormLabel>Email de Administrador</FormLabel>
                     <FormControl>
-                        <Input placeholder="admin" {...field} />
+                        <Input placeholder="admin@rifasxpress.com" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>

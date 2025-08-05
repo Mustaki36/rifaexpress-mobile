@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -6,8 +7,20 @@ import { MOCK_USER } from '@/lib/data';
 import crypto from 'crypto';
 import { useBlock } from './BlockContext';
 
+// Admin User
+const ADMIN_USER: UserProfile = {
+  id: 'admin-user-id',
+  name: 'Admin',
+  email: 'admin@rifasxpress.com',
+  isVerified: true,
+  role: 'admin',
+  createdAt: new Date(),
+  tickets: [],
+  password: 'password' // This is for the admin panel login
+};
+
 // This is a mock user database. In a real application, this would be a database.
-const initialUsers: UserProfile[] = [MOCK_USER];
+const initialUsers: UserProfile[] = [MOCK_USER, ADMIN_USER];
 
 // This is a mock verification code store. In a real app, use a DB or a service like Redis.
 const verificationStore = new Map<string, VerificationInfo>();
@@ -95,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Login attempt for blocked email:", email);
       return false;
     }
-    const foundUser = users.find(u => u.email === email);
+    const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     // Mock password check - DO NOT DO THIS IN PRODUCTION
     if (foundUser && pass === foundUser.password) { 
       setCurrentUser(foundUser);

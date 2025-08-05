@@ -12,7 +12,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 110 }, (_, i) => i + 15),
     drawDate: new Date('2024-09-30T18:00:00'),
     aiHint: 'new car',
-    creatorId: 'admin',
+    creatorId: 'admin-user-id',
     status: 'open',
   },
   {
@@ -26,7 +26,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 150 }, (_, i) => i + 1), // This raffle is sold out
     drawDate: new Date('2024-08-15T20:00:00'),
     aiHint: 'latest smartphone',
-    creatorId: 'admin',
+    creatorId: 'admin-user-id',
     status: 'closed',
   },
   {
@@ -54,7 +54,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 150 }, (_, i) => i + 50),
     drawDate: new Date('2024-10-10T20:00:00'),
     aiHint: 'tropical beach',
-    creatorId: 'admin',
+    creatorId: 'admin-user-id',
     status: 'open',
   },
 ];
