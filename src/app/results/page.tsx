@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -7,7 +9,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MOCK_RESULTS } from "@/lib/data";
 import { Trophy, ShieldCheck } from "lucide-react";
 import {
   Tooltip,
@@ -15,8 +16,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useResults } from "@/context/ResultsContext";
 
 export default function ResultsPage() {
+  const { results } = useResults();
   return (
     <div className="container mx-auto px-4 py-8">
       <section className="text-center mb-12">
@@ -41,31 +44,39 @@ export default function ResultsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {MOCK_RESULTS.map((result) => (
-                <TableRow key={result.id}>
-                  <TableCell className="font-medium">{result.raffleTitle}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="default" className="text-lg bg-primary">
-                      <Trophy className="mr-2 h-4 w-4" />
-                      {result.winningNumber.toString().padStart(3, '0')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{result.winnerName}</TableCell>
-                  <TableCell>{result.drawDate}</TableCell>
-                  <TableCell className="text-right">
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <ShieldCheck className="h-6 w-6 text-primary cursor-pointer inline-block" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs max-w-xs break-all font-mono">
-                          {result.fairnessProof}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TableCell>
+              {results.length > 0 ? (
+                results.map((result) => (
+                  <TableRow key={result.id}>
+                    <TableCell className="font-medium">{result.raffleTitle}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="default" className="text-lg bg-primary">
+                        <Trophy className="mr-2 h-4 w-4" />
+                        {result.winningNumber.toString().padStart(3, '0')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{result.winnerName}</TableCell>
+                    <TableCell>{result.drawDate}</TableCell>
+                    <TableCell className="text-right">
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <ShieldCheck className="h-6 w-6 text-primary cursor-pointer inline-block" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs max-w-xs break-all font-mono">
+                            {result.fairnessProof}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        Aún no hay resultados para mostrar.
+                    </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </TooltipProvider>

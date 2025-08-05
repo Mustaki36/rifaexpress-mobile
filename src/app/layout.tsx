@@ -6,6 +6,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { RaffleProvider } from '@/context/RaffleContext';
 import { AuthProvider } from '@/context/AuthContext';
+import { ResultsProvider } from '@/context/ResultsContext';
 
 export const metadata: Metadata = {
   title: 'RifaExpress Mobile',
@@ -31,12 +32,14 @@ export default function RootLayout({
       >
         <AuthProvider>
           <RaffleProvider>
-            <div className="relative flex min-h-screen flex-col">
-              <SiteHeader />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
-            </div>
-            <Toaster />
+            <ResultsProvider>
+                <div className="relative flex min-h-screen flex-col">
+                <SiteHeader />
+                <main className="flex-1">{children}</main>
+                <SiteFooter />
+                </div>
+                <Toaster />
+            </ResultsProvider>
           </RaffleProvider>
         </AuthProvider>
       </body>
