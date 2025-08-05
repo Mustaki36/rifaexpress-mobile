@@ -21,18 +21,20 @@ export function NumberGrid({
   pricePerTicket,
 }: NumberGridProps) {
   const numbers = Array.from({ length: totalTickets }, (_, i) => i + 1);
-  const audioUrl = "https://files.catbox.moe/gdq4uf.mp3";
+  const selectSoundUrl = "https://files.catbox.moe/gdq4uf.mp3";
+  const deselectSoundUrl = "https://files.catbox.moe/wuq2wh.mp3";
 
   const handleSelect = (number: number) => {
     onSelectNumber(number);
-    // Play sound only when selecting, not deselecting
-    if (!selectedNumbers.includes(number)) {
-      try {
-        const audio = new Audio(audioUrl);
-        audio.play();
-      } catch (e) {
-        console.error("Error playing sound:", e);
-      }
+    
+    const isSelecting = !selectedNumbers.includes(number);
+    const soundUrl = isSelecting ? selectSoundUrl : deselectSoundUrl;
+
+    try {
+      const audio = new Audio(soundUrl);
+      audio.play();
+    } catch (e) {
+      console.error("Error playing sound:", e);
     }
   }
 
