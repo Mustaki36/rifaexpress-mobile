@@ -37,6 +37,7 @@ import { Loader2 } from "lucide-react";
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
   email: z.string().email("Por favor, introduce un email válido."),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
   phone: z.string().min(8, "El número de teléfono no es válido."),
   role: z.enum(["regular", "creator"]),
   street: z.string().min(5, "La calle debe tener al menos 5 caracteres."),
@@ -60,6 +61,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
     defaultValues: {
       name: "",
       email: "",
+      password: "password",
       phone: "",
       role: "regular",
       street: "",
@@ -123,6 +125,19 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                   <FormMessage />
                 </FormItem>
               )}
+            />
+             <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Contraseña Temporal</FormLabel>
+                    <FormControl>
+                    <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
             />
              <FormField
                 control={form.control}

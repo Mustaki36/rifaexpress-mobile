@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRaffles } from "@/context/RaffleContext";
 import { RaffleCard } from "@/components/raffle-card";
+import { ForcePasswordChangeDialog } from "./force-password-change-dialog";
 
 export default function ProfilePage() {
   const { user, isAuthenticated } = useAuth();
@@ -34,6 +35,8 @@ export default function ProfilePage() {
     : 'No proporcionada';
 
   return (
+    <>
+    <ForcePasswordChangeDialog />
     <div className="container mx-auto px-4 py-8">
       <section className="mb-12 flex flex-col items-center text-center">
         <Avatar className="h-24 w-24 mb-4 border-4 border-primary">
@@ -134,5 +137,6 @@ export default function ProfilePage() {
         </section>
       )}
     </div>
+    </>
   );
 }

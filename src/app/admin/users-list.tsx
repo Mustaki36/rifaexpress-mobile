@@ -47,7 +47,7 @@ import { useBlock } from "@/context/BlockContext";
 import type { UserProfile } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Eye, ShieldCheck, User, Home, Ticket, ListOrdered, Calendar, MoreHorizontal, UserPlus, Pencil, Trash2, ShieldAlert, Search } from "lucide-react";
+import { Eye, ShieldCheck, User, Home, Ticket, ListOrdered, Calendar, MoreHorizontal, UserPlus, Pencil, Trash2, ShieldAlert, Search, KeyRound } from "lucide-react";
 import { useRaffles } from "@/context/RaffleContext";
 import { AddUserDialog } from "./add-user-dialog";
 import { EditUserSheet } from "./edit-user-sheet";
@@ -55,7 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
 export function UsersList() {
-  const { allUsers, deleteUser } = useAuth();
+  const { allUsers, deleteUser, editUser } = useAuth();
   const { raffles } = useRaffles();
   const { blockUser } = useBlock();
   const { toast } = useToast();
@@ -169,7 +169,10 @@ export function UsersList() {
                                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <div className="font-medium">{user.name}</div>
+                                <div className="font-medium flex items-center gap-2">
+                                  {user.name}
+                                  {user.mustChangePassword && <KeyRound className="h-4 w-4 text-amber-500" title="Requiere cambio de contraseña"/>}
+                                </div>
                                 <div className="text-sm text-muted-foreground">{user.email}</div>
                             </div>
                         </div>

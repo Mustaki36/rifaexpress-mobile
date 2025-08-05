@@ -35,12 +35,14 @@ export type UserProfile = {
   id: string;
   name: string;
   email: string;
+  password?: string;
   phone?: string;
   address?: Address;
   isVerified: boolean;
   avatar: string;
   role: 'regular' | 'creator';
   createdAt: Date;
+  mustChangePassword?: boolean;
   tickets: {
     raffleId: string;
     raffleTitle: string;

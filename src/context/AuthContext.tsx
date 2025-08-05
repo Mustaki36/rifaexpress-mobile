@@ -26,6 +26,7 @@ interface AuthContextType {
   requestVerificationCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => boolean;
   isEmailBlocked: (email: string) => boolean;
+  forcePasswordChange: (userId: string, newPass: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,14 +91,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = (email: string, pass: string): boolean => {
-    // This is a MOCK login. In a real app, you'd verify against a backend.
     if(isEmailBlocked(email)) {
       console.error("Login attempt for blocked email:", email);
       return false;
     }
     const foundUser = users.find(u => u.email === email);
     // Mock password check - DO NOT DO THIS IN PRODUCTION
-    if (foundUser && pass === 'password') { 
+    if (foundUser && pass === foundUser.password) { 
       setCurrentUser(foundUser);
       return true;
     }
@@ -123,39 +123,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
       tickets: [],
       createdAt: new Date(),
+      mustChangePassword: true,
     };
      setUsers(prevUsers => [...prevUsers, newUser]);
   }
   
   const editUser = (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
-    setUsers(prevUsers => prevUsers.map(user => 
-      user.id === userId ? { ...user, ...userData, avatar: `https://placehold.co/100x100.png?text=${userData.name?.charAt(0) || user.name.charAt(0)}` } : user
-    ));
-    // If the currently logged-in user is the one being edited, update their session
+    setUsers(prevUsers => prevUsers.map(user => {
+      if (user.id !== userId) return user;
+      
+      const updatedUser = { ...user, ...userData };
+      if (userData.name) {
+          updatedUser.avatar = `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`;
+      }
+      return updatedUser;
+    }));
+
     if (currentUser?.id === userId) {
         setCurrentUser(prev => prev ? { ...prev, ...userData } : null);
     }
   };
 
+  const forcePasswordChange = (userId: string, newPass: string) => {
+    editUser(userId, { password: newPass, mustChangePassword: false });
+  }
+
   const deleteUser = (userId: string) => {
     setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-    // If the currently logged-in user is deleted, log them out
     if (currentUser?.id === userId) {
         logout();
     }
   }
 
-
   const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    addUser({ name, email, phone, address, role });
+    addUser({ name, email, password: pass, phone, address, role });
     // Automatically log in the new user
-    // NOTE: We are using "password" as a mock password for all users
-    login(email, "password"); 
+    login(email, pass); 
   };
 
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, allUsers: users, isAuthenticated: !!currentUser, login, logout, signup, addUser, editUser, deleteUser, requestVerificationCode, verifyCode, isEmailBlocked }}>
+    <AuthContext.Provider value={{ user: currentUser, allUsers: users, isAuthenticated: !!currentUser, login, logout, signup, addUser, editUser, deleteUser, requestVerificationCode, verifyCode, isEmailBlocked, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,11 +31,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, KeyRound } from "lucide-react";
 import type { UserProfile } from "@/lib/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -57,6 +68,8 @@ interface EditUserSheetProps {
 export function EditUserSheet({ user, onOpenChange }: EditUserSheetProps) {
   const { toast } = useToast();
   const { editUser } = useAuth();
+  const [isResetPasswordAlertOpen, setIsResetPasswordAlertOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -106,7 +119,22 @@ export function EditUserSheet({ user, onOpenChange }: EditUserSheetProps) {
     }
   };
 
+  const handleResetPassword = () => {
+      if (!user || !newPassword) {
+           toast({ variant: "destructive", title: "Error", description: "La nueva contraseña no puede estar vacía." });
+          return;
+      };
+      editUser(user.id, { password: newPassword, mustChangePassword: true });
+      toast({
+          title: "Contraseña Restablecida",
+          description: `El usuario ${user.name} deberá cambiar su contraseña en el próximo inicio de sesión.`
+      });
+      setIsResetPasswordAlertOpen(false);
+      setNewPassword("");
+  }
+
   return (
+    <>
     <Sheet open={!!user} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-md flex flex-col">
         <SheetHeader>
@@ -239,6 +267,17 @@ export function EditUserSheet({ user, onOpenChange }: EditUserSheetProps) {
                     />
                 </div>
 
+                <Separator />
+                
+                <div>
+                     <h4 className="font-medium text-sm">Seguridad</h4>
+                     <Button type="button" variant="outline" className="mt-2 w-full" onClick={() => setIsResetPasswordAlertOpen(true)}>
+                        <KeyRound />
+                        Restablecer Contraseña de Usuario
+                    </Button>
+                </div>
+
+
                 {/* This empty div is a spacer to push the footer down */}
                 <div className="pt-4" /> 
 
@@ -256,5 +295,28 @@ export function EditUserSheet({ user, onOpenChange }: EditUserSheetProps) {
         </ScrollArea>
       </SheetContent>
     </Sheet>
+    
+      <AlertDialog open={isResetPasswordAlertOpen} onOpenChange={setIsResetPasswordAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restablecer Contraseña</AlertDialogTitle>
+            <AlertDialogDescription>
+              Introduce una nueva contraseña temporal para <span className="font-bold">{user?.name}</span>. El usuario deberá cambiarla en su próximo inicio de sesión.
+            </AlertDialogDescription>
+            <Input 
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Nueva contraseña temporal"
+                className="mt-2"
+            />
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setNewPassword("")}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetPassword} disabled={!newPassword}>Restablecer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </>
   );
 }
