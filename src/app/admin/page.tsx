@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { HistoryList } from "./history-list";
 import { BlockedUsersList } from "./blocked-users-list";
 import { UsersList } from "./users-list";
+import { AuthProvider } from "@/context/AuthContext";
+import { BlockProvider } from "@/context/BlockContext";
 
-export default function AdminPage() {
+function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleLogout = () => {
@@ -85,4 +87,15 @@ export default function AdminPage() {
       </Tabs>
     </div>
   );
+}
+
+
+export default function AdminPage() {
+  return (
+    <BlockProvider>
+        <AuthProvider>
+            <AdminDashboard />
+        </AuthProvider>
+    </BlockProvider>
+  )
 }

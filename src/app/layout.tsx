@@ -32,22 +32,22 @@ export default function RootLayout({
           "min-h-screen bg-background font-body antialiased"
         )}
       >
-        <BlockProvider>
-          <AuthProvider>
-            <RaffleProvider>
-              <ResultsProvider>
-                <SettingsProvider>
-                  <div className="relative flex min-h-screen flex-col">
-                  <SiteHeader />
-                  <main className="flex-1">{children}</main>
-                  <SiteFooter />
-                  </div>
-                  <Toaster />
-                </SettingsProvider>
-              </ResultsProvider>
-            </RaffleProvider>
-          </AuthProvider>
-        </BlockProvider>
+        <RaffleProvider>
+            <ResultsProvider>
+              <SettingsProvider>
+                <BlockProvider>
+                  <AuthProvider>
+                    <div className="relative flex min-h-screen flex-col">
+                    <SiteHeader />
+                    <main className="flex-1">{children}</main>
+                    <SiteFooter />
+                    </div>
+                    <Toaster />
+                  </AuthProvider>
+                </BlockProvider>
+              </SettingsProvider>
+            </ResultsProvider>
+        </RaffleProvider>
       </body>
     </html>
   );

@@ -20,6 +20,9 @@ interface AuthContextType {
   login: (email: string, pass: string) => boolean;
   logout: () => void;
   signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => void;
+  addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => void;
+  editUser: (userId: string, userData: Partial<UserProfile>) => void;
+  deleteUser: (userId: string) => void;
   requestVerificationCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => boolean;
   isEmailBlocked: (email: string) => boolean;
@@ -104,31 +107,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setCurrentUser(null);
   };
-
-  const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    if (isEmailBlocked(email)) {
+  
+  const addUser = (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => {
+     if (isEmailBlocked(userData.email)) {
         throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
-    if (users.some(u => u.email === email)) {
+    if (users.some(u => u.email === userData.email)) {
       throw new Error("El email ya está registrado.");
     }
 
     const newUser: UserProfile = {
+      ...userData,
       id: `user-${crypto.randomBytes(8).toString('hex')}`,
-      name,
-      email,
-      phone,
-      address,
-      isVerified,
-      role,
-      avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
+      isVerified: userData.isVerified || false,
+      avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
       tickets: [],
       createdAt: new Date(),
-      // In a real app, you would hash the password
     };
+     setUsers(prevUsers => [...prevUsers, newUser]);
+  }
+  
+  const editUser = (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
+    setUsers(prevUsers => prevUsers.map(user => 
+      user.id === userId ? { ...user, ...userData, avatar: `https://placehold.co/100x100.png?text=${userData.name?.charAt(0) || user.name.charAt(0)}` } : user
+    ));
+    // If the currently logged-in user is the one being edited, update their session
+    if (currentUser?.id === userId) {
+        setCurrentUser(prev => prev ? { ...prev, ...userData } : null);
+    }
+  };
 
-    setUsers(prevUsers => [...prevUsers, newUser]);
-    verificationStore.delete(email); // Clean up verification code after successful signup
+  const deleteUser = (userId: string) => {
+    setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+    // If the currently logged-in user is deleted, log them out
+    if (currentUser?.id === userId) {
+        logout();
+    }
+  }
+
+
+  const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
+    addUser({ name, email, phone, address, role });
     // Automatically log in the new user
     // NOTE: We are using "password" as a mock password for all users
     login(email, "password"); 
@@ -136,7 +155,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, allUsers: users, isAuthenticated: !!currentUser, login, logout, signup, requestVerificationCode, verifyCode, isEmailBlocked }}>
+    <AuthContext.Provider value={{ user: currentUser, allUsers: users, isAuthenticated: !!currentUser, login, logout, signup, addUser, editUser, deleteUser, requestVerificationCode, verifyCode, isEmailBlocked }}>
       {children}
     </AuthContext.Provider>
   );
