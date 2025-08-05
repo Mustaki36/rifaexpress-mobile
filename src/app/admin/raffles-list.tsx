@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,13 +19,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Users, Trophy, Pencil, Trash2, Search, Filter } from "lucide-react";
+import { MoreHorizontal, Users, Trophy, Pencil, Trash2, Search, Filter, ArrowDownUp } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -43,6 +46,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { Raffle } from "@/lib/types";
 
+type SortOption = "recent" | "oldest" | "highest_progress" | "lowest_progress";
 
 export function RafflesList() {
   const { toast } = useToast();
@@ -51,20 +55,36 @@ export function RafflesList() {
   const [raffleToDelete, setRaffleToDelete] = useState<string | null>(null);
   const [selectedRaffles, setSelectedRaffles] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredRaffles, setFilteredRaffles] = useState<Raffle[]>(raffles);
+  const [sortOption, setSortOption] = useState<SortOption>("recent");
 
-  useEffect(() => {
-    const results = raffles.filter(raffle =>
+  const filteredAndSortedRaffles = useMemo(() => {
+    let filtered = raffles.filter(raffle =>
       raffle.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       raffle.prize.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setFilteredRaffles(results);
-  }, [searchTerm, raffles]);
+
+    switch (sortOption) {
+      case "recent":
+        filtered.sort((a, b) => b.drawDate.getTime() - a.drawDate.getTime());
+        break;
+      case "oldest":
+        filtered.sort((a, b) => a.drawDate.getTime() - b.drawDate.getTime());
+        break;
+      case "highest_progress":
+        filtered.sort((a, b) => (b.soldTickets.length / b.totalTickets) - (a.soldTickets.length / a.totalTickets));
+        break;
+      case "lowest_progress":
+        filtered.sort((a, b) => (a.soldTickets.length / a.totalTickets) - (b.soldTickets.length / b.totalTickets));
+        break;
+    }
+
+    return filtered;
+  }, [searchTerm, raffles, sortOption]);
 
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedRaffles(filteredRaffles.map((r) => r.id));
+      setSelectedRaffles(filteredAndSortedRaffles.map((r) => r.id));
     } else {
       setSelectedRaffles([]);
     }
@@ -156,10 +176,23 @@ export function RafflesList() {
                             className="w-full sm:w-64 pl-10"
                         />
                     </div>
-                    <Button variant="outline">
-                        <Filter className="mr-2 h-4 w-4" />
-                        Filtrar
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline">
+                          <Filter className="mr-2 h-4 w-4" />
+                          Filtrar
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                          <DropdownMenuRadioItem value="recent">Más Recientes</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="oldest">Más Antiguas</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="highest_progress">Mayor Progreso</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="lowest_progress">Menor Progreso</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
            </div>
             {selectedRaffles.length > 0 && (
@@ -178,7 +211,7 @@ export function RafflesList() {
                 <TableRow>
                   <TableHead padding="checkbox" className="w-12">
                     <Checkbox
-                      checked={filteredRaffles.length > 0 && selectedRaffles.length === filteredRaffles.length}
+                      checked={filteredAndSortedRaffles.length > 0 && selectedRaffles.length === filteredAndSortedRaffles.length}
                       onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
                       aria-label="Seleccionar todo"
                     />
@@ -190,7 +223,7 @@ export function RafflesList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRaffles.map((raffle) => {
+                {filteredAndSortedRaffles.map((raffle) => {
                   const progress =
                     (raffle.soldTickets.length / raffle.totalTickets) * 100;
                   const isSelected = selectedRaffles.includes(raffle.id);
