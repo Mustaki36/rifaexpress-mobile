@@ -21,7 +21,7 @@ interface AuthContextType {
   logout: () => void;
   signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => void;
   addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => void;
-  editUser: (userId: string, userData: Partial<UserProfile>) => void;
+  editUser: (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => void;
   deleteUser: (userId: string) => void;
   requestVerificationCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => boolean;
@@ -139,8 +139,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return updatedUser;
     }));
 
+    // Also update the currently logged-in user if they are the one being edited
     if (currentUser?.id === userId) {
-        setCurrentUser(prev => prev ? { ...prev, ...userData } : null);
+        setCurrentUser(prev => prev ? { ...prev, ...userData } as UserProfile : null);
     }
   };
 

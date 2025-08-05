@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Raffle, ReservedTicket } from '@/lib/types';
 import { MOCK_RAFFLES } from '@/lib/data';
 
@@ -78,11 +78,11 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     ));
   };
 
-  const releaseTicketsForUser = (userId: string, raffleId: string) => {
+  const releaseTicketsForUser = useCallback((userId: string, raffleId: string) => {
       setReservedTickets(prev => prev.filter(
           t => !(t.userId === userId && t.raffleId === raffleId)
       ))
-  }
+  }, []);
 
   const purchaseTickets = (raffleId: string, numbers: number[], userId: string) => {
      // 1. Move reserved tickets to sold
@@ -96,6 +96,10 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
      setReservedTickets(prev => prev.filter(
         t => !(t.raffleId === raffleId && numbers.includes(t.number) && t.userId === userId)
      ));
+     // 3. Add ticket info to user profile (assuming AuthContext is available or can be updated)
+     // This part is complex as it requires cross-context communication. 
+     // For this mock, we'll skip updating the user's `tickets` array in AuthContext.
+     // In a real app, this would likely be an API call that updates both raffle and user data transactionally.
   };
 
 

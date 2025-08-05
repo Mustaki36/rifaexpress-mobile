@@ -17,7 +17,7 @@ import { AuthRequiredDialog } from "@/components/auth-required-dialog";
 export default function RafflePage() {
   const params = useParams();
   const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser } = useRaffles();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, editUser } = useAuth();
   const raffleId = params.id as string;
   const raffle = raffles.find((r) => r.id === raffleId);
   
@@ -90,6 +90,30 @@ export default function RafflePage() {
     }
     
     purchaseTickets(raffle.id, selectedNumbers, user.id);
+
+    // This part is tricky because it crosses contexts.
+    // In a real app, an API call would handle this atomically.
+    // Here, we'll manually update the user in the AuthContext.
+    const newTicketRecord = {
+        raffleId: raffle.id,
+        raffleTitle: raffle.title,
+        ticketNumbers: selectedNumbers,
+    };
+
+    const existingRaffleIndex = user.tickets.findIndex(t => t.raffleId === raffle.id);
+    let updatedTickets = [...user.tickets];
+
+    if (existingRaffleIndex > -1) {
+        // User already has tickets for this raffle, add new ones
+        const existingRecord = updatedTickets[existingRaffleIndex];
+        const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
+        updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
+    } else {
+        // First time user buys tickets for this raffle
+        updatedTickets.push(newTicketRecord);
+    }
+    
+    editUser(user.id, { tickets: updatedTickets });
 
     toast({
         title: "¡Compra exitosa!",
@@ -164,7 +188,7 @@ export default function RafflePage() {
                       </div>
                     </div>
                     <div className="text-2xl font-bold text-primary">
-                        Total: ${totalPrice}
+                        Total: ${totalPrice.toFixed(2)}
                     </div>
                   </>
                 ) : (
@@ -176,7 +200,7 @@ export default function RafflePage() {
             </Card>
 
             <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0}>
-              Comprar Ahora (${totalPrice})
+              Comprar Ahora (${totalPrice.toFixed(2)})
             </Button>
           </div>
         </div>
