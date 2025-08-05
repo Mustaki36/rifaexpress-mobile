@@ -28,12 +28,6 @@ export function MainNav() {
               Crear Rifa
             </Link>
           </Button>
-           <Link
-            href="/admin"
-            className="transition-colors hover:text-primary text-muted-foreground"
-          >
-            Admin
-          </Link>
          </>
       )}
       <Link
