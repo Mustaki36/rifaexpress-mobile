@@ -49,11 +49,14 @@ const getLotteryInfoFlow = ai.defineFlow(
     // Simulate fetching the next draw date.
     // Let's assume draws are daily at 9 PM.
     const now = new Date();
-    const nextDraw = new Date(now);
-    nextDraw.setHours(21, 0, 0, 0);
-    if (now.getHours() >= 21) {
-        // If it's past 9 PM, the next draw is tomorrow
-        nextDraw.setDate(nextDraw.getDate() + 1);
+    const nextDraw = new Date();
+    
+    // Set the time to 9:00 PM
+    nextDraw.setHours(21, 0, 0, 0); 
+
+    // If the current time is past 9 PM, the draw is for the next day.
+    if (now.getTime() > nextDraw.getTime()) {
+      nextDraw.setDate(nextDraw.getDate() + 1);
     }
     
     // This is a placeholder. A real implementation would not return a winning number
