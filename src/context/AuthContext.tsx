@@ -30,7 +30,7 @@ interface AuthContextType {
   user: UserProfile | null;
   allUsers: UserProfile[];
   isAuthenticated: boolean;
-  login: (email: string, pass: string) => boolean;
+  login: (email: string, pass: string) => UserProfile | null;
   logout: () => void;
   signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => void;
   addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => void;
@@ -103,18 +103,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // For this mock, we'll just start logged out.
   }, []);
 
-  const login = (email: string, pass: string): boolean => {
+  const login = (email: string, pass: string): UserProfile | null => {
     if(isEmailBlocked(email)) {
       console.error("Login attempt for blocked email:", email);
-      return false;
+      return null;
     }
     const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     // Mock password check - DO NOT DO THIS IN PRODUCTION
     if (foundUser && pass === foundUser.password) { 
       setCurrentUser(foundUser);
-      return true;
+      return foundUser;
     }
-    return false;
+    return null;
   };
 
   const logout = () => {

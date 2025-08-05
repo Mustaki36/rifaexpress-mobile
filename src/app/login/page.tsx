@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -38,13 +39,18 @@ export default function LoginPage() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const success = login(values.email, values.password);
-    if (success) {
+    const user = login(values.email, values.password);
+    if (user) {
       toast({
         title: "¡Bienvenido de vuelta!",
         description: "Has iniciado sesión exitosamente.",
       });
-      router.push("/profile");
+      // Redirect admin users to the admin panel, others to profile
+      if (user.role === 'admin') {
+        router.push("/admin");
+      } else {
+        router.push("/profile");
+      }
     } else {
       toast({
         variant: "destructive",

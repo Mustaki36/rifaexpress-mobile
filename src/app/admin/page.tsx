@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RafflesList } from "./raffles-list";
 import { ListOrdered, Shield, LogOut, History, ShieldX, Users } from "lucide-react";
@@ -11,25 +10,21 @@ import { Button } from "@/components/ui/button";
 import { HistoryList } from "./history-list";
 import { BlockedUsersList } from "./blocked-users-list";
 import { UsersList } from "./users-list";
-
-// Simulate a persistent session state outside the component
-let adminIsLoggedIn = false;
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 function AdminDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(adminIsLoggedIn);
-
-  const handleLoginSuccess = () => {
-    adminIsLoggedIn = true;
-    setIsAuthenticated(true);
-  };
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
 
   const handleLogout = () => {
-    adminIsLoggedIn = false;
-    setIsAuthenticated(false);
+    logout();
+    router.push("/");
   };
 
-  if (!isAuthenticated) {
-    return <AdminLoginForm onLoginSuccess={handleLoginSuccess} />;
+  // Redirect to login if not authenticated or not an admin
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return <AdminLoginForm onLoginSuccess={() => {}} />;
   }
 
   return (

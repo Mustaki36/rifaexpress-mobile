@@ -1,6 +1,6 @@
+
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   username: z.string().min(1, "El nombre de usuario es requerido."),
@@ -37,6 +38,7 @@ interface AdminLoginFormProps {
 export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   const { toast } = useToast();
   const { login } = useAuth();
+  const router = useRouter();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,19 +51,20 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   function onSubmit(values: z.infer<typeof formSchema>) {
     // IMPORTANT: This now uses the main login system.
     // The default admin email is 'admin@rifasxpress.com' and password is 'password'.
-    const success = login(values.username, values.password);
+    const user = login(values.username, values.password);
 
-    if (success) {
+    if (user && user.role === 'admin') {
        toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión como administrador.",
       });
       onLoginSuccess();
+      // No need to router.push, the parent component will re-render.
     } else {
         toast({
             variant: "destructive",
             title: "Error de autenticación",
-            description: "Usuario o contraseña incorrectos.",
+            description: "Credenciales de administrador incorrectas o no tienes permiso.",
         })
     }
   }
