@@ -58,7 +58,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         if (soundTimeoutRef.current) {
             clearTimeout(soundTimeoutRef.current);
         }
-        soundTimeoutRef.current = setTimeout(playHoverSound, 500);
+        soundTimeoutRef.current = setTimeout(playHoverSound, 250);
     };
 
     const handleMouseLeave = () => {

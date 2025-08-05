@@ -94,7 +94,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
     if (soundTimeoutRef.current) {
         clearTimeout(soundTimeoutRef.current);
     }
-    soundTimeoutRef.current = setTimeout(playHoverSound, 500);
+    soundTimeoutRef.current = setTimeout(playHoverSound, 250);
   };
 
   const handleMouseLeave = () => {
