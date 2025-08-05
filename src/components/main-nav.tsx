@@ -8,11 +8,14 @@ import { Button } from "./ui/button";
 import { PlusCircle, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTransition } from "@/context/TransitionContext";
 
 export function MainNav() {
   const { user } = useAuth();
   const [isClient, setIsClient] = useState(false);
   const pathname = usePathname();
+  const { setAnimationDuration } = useTransition();
+
 
   useEffect(() => {
     setIsClient(true);
@@ -26,6 +29,7 @@ export function MainNav() {
 
   const handleRifasClick = () => {
     if (pathname !== '/') {
+      setAnimationDuration(3); // Set slow transition
       const soundUrl = "https://files.catbox.moe/aaulmt.mp3";
       try {
           const audio = new Audio(soundUrl);
@@ -33,6 +37,8 @@ export function MainNav() {
       } catch (e) {
           console.error("Error playing sound:", e);
       }
+    } else {
+        setAnimationDuration(0.5); // Set fast transition if already on the page
     }
   };
 

@@ -18,6 +18,7 @@ import { useState, useEffect, useRef } from "react";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { CountdownTimer } from "./countdown-timer";
+import { useTransition } from "@/context/TransitionContext";
 
 interface RaffleCardProps {
   raffle: Raffle;
@@ -49,7 +50,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   const progress = (raffle.soldTickets.length / raffle.totalTickets) * 100;
   const isSoldOut = progress >= 100;
   const cardOpenSoundUrl = "https://files.catbox.moe/01lxup.mp3";
-
+  const { setAnimationDuration } = useTransition();
 
   const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(raffle.drawDate).totalSeconds);
 
@@ -71,6 +72,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   });
 
   const handleCardClick = () => {
+    setAnimationDuration(0.5); // Set fast transition for card clicks
     try {
         const audio = new Audio(cardOpenSoundUrl);
         audio.play();

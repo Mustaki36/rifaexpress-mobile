@@ -9,6 +9,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ResultsProvider } from '@/context/ResultsContext';
 import { SettingsProvider } from '@/context/SettingsContext';
 import { BlockProvider } from '@/context/BlockContext';
+import { TransitionProvider } from '@/context/TransitionContext';
 
 export const metadata: Metadata = {
   title: 'RifasXpress Mobile',
@@ -32,22 +33,24 @@ export default function RootLayout({
           "min-h-screen bg-background font-body antialiased"
         )}
       >
-        <RaffleProvider>
-            <ResultsProvider>
-              <SettingsProvider>
-                <BlockProvider>
-                  <AuthProvider>
-                    <div className="relative flex min-h-screen flex-col">
-                    <SiteHeader />
-                    <main className="flex-1">{children}</main>
-                    <SiteFooter />
-                    </div>
-                    <Toaster />
-                  </AuthProvider>
-                </BlockProvider>
-              </SettingsProvider>
-            </ResultsProvider>
-        </RaffleProvider>
+        <TransitionProvider>
+          <RaffleProvider>
+              <ResultsProvider>
+                <SettingsProvider>
+                  <BlockProvider>
+                    <AuthProvider>
+                      <div className="relative flex min-h-screen flex-col">
+                      <SiteHeader />
+                      <main className="flex-1">{children}</main>
+                      <SiteFooter />
+                      </div>
+                      <Toaster />
+                    </AuthProvider>
+                  </BlockProvider>
+                </SettingsProvider>
+              </ResultsProvider>
+          </RaffleProvider>
+        </TransitionProvider>
       </body>
     </html>
   );
