@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -9,7 +8,7 @@ import {
     signOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
 import { MOCK_ADMIN_USER } from '@/lib/data'; // We'll keep this for now for the admin role
@@ -50,7 +49,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          setCurrentUser({ id: user.uid, ...userDocSnap.data() } as UserProfile);
+          const userData = userDocSnap.data();
+          setCurrentUser({ 
+              id: user.uid, 
+              ...userData,
+              createdAt: userData.createdAt?.toDate() // Convert timestamp to Date
+          } as UserProfile);
         } else {
            // Handle case where user exists in Auth but not in Firestore
            // This might happen if Firestore data is deleted manually.
@@ -72,7 +76,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchAllUsers = async () => {
     const querySnapshot = await getDocs(collection(db, "users"));
-    const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+    const usersList = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+            id: doc.id, 
+            ...data,
+            createdAt: data.createdAt?.toDate() // Convert timestamp to Date
+        } as UserProfile
+    });
     setAllUsers(usersList);
   };
 
@@ -118,7 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
 
-    const newUserProfile: Omit<UserProfile, 'id'> = {
+    const newUserProfile: Omit<UserProfile, 'id' | 'createdAt'> = {
        name,
        email,
        phone,
@@ -127,37 +138,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        role,
        avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
        tickets: [],
-       createdAt: serverTimestamp(), // Use server timestamp
+       password, // Storing password for force change logic, NOT recommended for production without encryption
+       mustChangePassword: false,
     };
 
-    await setDoc(doc(db, "users", user.uid), newUserProfile);
-    setCurrentUser({ id: user.uid, ...newUserProfile, createdAt: new Date() }); // Approximate client date
+    await setDoc(doc(db, "users", user.uid), {
+        ...newUserProfile,
+        createdAt: serverTimestamp(),
+    });
+    
     await fetchAllUsers(); // Refresh users list
   };
 
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => {
-     if (isEmailBlocked(userData.email)) {
-        throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
+    if (isEmailBlocked(userData.email)) {
+      throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
     
-    // This function would typically be a server-side (Cloud Function) operation
-    // to create a user without signing them in. The client-side SDK doesn't
-    // directly support creating a user without logging them in.
-    // For this simulation, we'll skip creating the Auth user and just add to Firestore.
-    // This means the added user won't be able to log in until this is moved to a backend.
-    console.warn("addUser is simulating Firestore entry only. User cannot log in.");
-    
-    const randomId = doc(collection(db, "users")).id;
-    const newUser: Omit<UserProfile, 'id'> = {
+    // This function creates a user document in Firestore.
+    // In a real app, you would also need a backend process (like a Cloud Function)
+    // to create the corresponding Firebase Auth user to allow them to log in.
+    const newUser: Omit<UserProfile, 'id' | 'createdAt'> = {
       ...userData,
       isVerified: userData.isVerified || false,
       avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
       tickets: [],
-      createdAt: serverTimestamp(),
-      mustChangePassword: true,
+      mustChangePassword: true, // Force password change on first login
     };
-    await setDoc(doc(db, "users", randomId), newUser);
-    await fetchAllUsers();
+
+    const docRef = await addDoc(collection(db, "users"), {
+        ...newUser,
+        createdAt: serverTimestamp()
+    });
+
+    // Update the local state optimistically.
+    setAllUsers(prev => [...prev, {id: docRef.id, createdAt: new Date(), ...newUser}])
   }
   
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
@@ -167,7 +182,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Also update the currently logged-in user if they are the one being edited
     if (currentUser?.id === userId) {
         const updatedUserDoc = await getDoc(userDocRef);
-        setCurrentUser({ id: userId, ...updatedUserDoc.data() } as UserProfile);
+        if (updatedUserDoc.exists()) {
+            const data = updatedUserDoc.data();
+            setCurrentUser({ 
+                id: userId, 
+                ...data,
+                createdAt: data.createdAt?.toDate()
+            } as UserProfile);
+        }
     }
     await fetchAllUsers();
   };
@@ -187,22 +209,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteUser = async (userId: string) => {
     // Deleting a user should be a privileged, server-side operation.
-    console.warn("deleteUser is a placeholder and doesn't delete the Firebase Auth user.");
-    // In a real app, you'd call a Cloud Function that uses the Admin SDK to delete the user.
-    // await deleteDoc(doc(db, "users", userId));
+    // For this simulation, we will delete the Firestore document.
+    // NOTE: This does NOT delete the Firebase Auth user, which would require an admin SDK.
+    console.warn("deleteUser only removes the Firestore document, not the Auth user.");
+    await deleteDoc(db, "users", userId);
     await fetchAllUsers();
   }
 
-  // Request/verify code logic needs to be re-evaluated.
-  // Firebase has its own email verification flow which is more secure.
-  // We'll stub these out for now.
-  const requestVerificationCode = async (email: string): Promise<void> => {
-    console.warn("Mock function: requestVerificationCode");
-  }
-  const verifyCode = (email: string, code: string): boolean => {
-      console.warn("Mock function: verifyCode. Returning true for simulation.");
-      return true;
-  }
 
   return (
     <AuthContext.Provider value={{ user: currentUser, firebaseUser, allUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
