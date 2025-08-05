@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { RaffleProvider } from '@/context/RaffleContext';
+import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata: Metadata = {
   title: 'RifaExpress Mobile',
@@ -28,14 +29,16 @@ export default function RootLayout({
           "min-h-screen bg-background font-body antialiased"
         )}
       >
-        <RaffleProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-            <SiteFooter />
-          </div>
-          <Toaster />
-        </RaffleProvider>
+        <AuthProvider>
+          <RaffleProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <SiteHeader />
+              <main className="flex-1">{children}</main>
+              <SiteFooter />
+            </div>
+            <Toaster />
+          </RaffleProvider>
+        </AuthProvider>
       </body>
     </html>
   );

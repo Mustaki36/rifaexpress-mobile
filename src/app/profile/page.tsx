@@ -1,11 +1,27 @@
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MOCK_USER } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Mail, Ticket } from "lucide-react";
+import { User, Ticket } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function ProfilePage() {
-  const user = MOCK_USER;
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return (
+        <div className="container text-center py-20">
+            <h1 className="text-2xl font-bold mb-4">Acceso Denegado</h1>
+            <p className="text-muted-foreground mb-6">Debes iniciar sesión para ver tu perfil.</p>
+            <Button asChild>
+                <Link href="/login">Iniciar Sesión</Link>
+            </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
