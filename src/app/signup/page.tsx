@@ -491,14 +491,12 @@ export default function SignupPage() {
                    </div>
                 </div>
 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    <div className="md:col-span-2">
-                       <Button type="button" onClick={handleVerifyCode} disabled={!codeSent || isVerifyingCode || isCodeVerified} className="w-full">
-                          {isVerifyingCode && <Loader2 className="mr-2 animate-spin" />}
-                          {isCodeVerified ? <><BadgeCheck className="mr-2"/> Verificado</> : 'Verificar Código'}
-                       </Button>
-                    </div>
-                 </div>
+                <div className="flex justify-center">
+                    <Button type="button" onClick={handleVerifyCode} disabled={!codeSent || isVerifyingCode || isCodeVerified} className="w-full md:w-1/2">
+                        {isVerifyingCode && <Loader2 className="mr-2 animate-spin" />}
+                        {isCodeVerified ? <><BadgeCheck className="mr-2"/> Verificado</> : 'Verificar Código'}
+                    </Button>
+                </div>
 
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -509,7 +507,7 @@ export default function SignupPage() {
                     <FormItem>
                       <FormLabel>Número de Teléfono</FormLabel>
                       <FormControl>
-                        <Input placeholder="+1 234 567 890" {...field} />
+                        <Input placeholder="+1 787-123-4567" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -522,7 +520,7 @@ export default function SignupPage() {
                       <FormItem>
                         <FormLabel>País</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ej: México" {...field} />
+                          <Input placeholder="Puerto Rico" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -540,7 +538,7 @@ export default function SignupPage() {
                         <FormItem>
                         <FormLabel>Calle y Número</FormLabel>
                         <FormControl>
-                            <Input placeholder="Av. Siempre Viva 742" {...field} />
+                            <Input placeholder="123 Calle Principal" {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -554,7 +552,7 @@ export default function SignupPage() {
                             <FormItem>
                             <FormLabel>Ciudad</FormLabel>
                             <FormControl>
-                                <Input placeholder="Springfield" {...field} />
+                                <Input placeholder="San Juan" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -567,7 +565,7 @@ export default function SignupPage() {
                             <FormItem>
                             <FormLabel>Estado / Provincia</FormLabel>
                             <FormControl>
-                                <Input placeholder="No especificado" {...field} />
+                                <Input placeholder="PR" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
@@ -580,7 +578,7 @@ export default function SignupPage() {
                             <FormItem>
                             <FormLabel>Código Postal</FormLabel>
                             <FormControl>
-                                <Input placeholder="12345" {...field} />
+                                <Input placeholder="00901" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
