@@ -14,7 +14,15 @@ export function MainNav() {
       >
         Rifas
       </Link>
-      {user?.role === 'admin' ? (
+      
+      <Link
+        href="/results"
+        className="transition-colors hover:text-primary text-muted-foreground"
+      >
+        Resultados
+      </Link>
+      
+      {user?.role === 'admin' && (
         <Link
           href="/admin"
           className="transition-colors hover:text-primary font-semibold text-primary flex items-center gap-1"
@@ -22,16 +30,9 @@ export function MainNav() {
           <Shield className="h-4 w-4" />
           Panel de Administración
         </Link>
-      ) : (
-        <Link
-          href="/results"
-          className="transition-colors hover:text-primary text-muted-foreground"
-        >
-          Resultados
-        </Link>
       )}
 
-       {user?.role === 'creator' && (
+      {user?.role === 'creator' && (
          <>
           <Button variant="ghost" asChild>
             <Link href="/raffles/create">
