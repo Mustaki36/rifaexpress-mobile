@@ -34,6 +34,9 @@ export function MainNav() {
       try {
           const audio = new Audio(soundUrl);
           audio.play();
+          setTimeout(() => {
+            audio.pause();
+          }, 8000);
       } catch (e) {
           console.error("Error playing sound:", e);
       }
