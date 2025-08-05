@@ -11,9 +11,6 @@ export function SiteFooter() {
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-muted-foreground">
-            Donde cada boleto es una nueva oportunidad.
-          </p>
           <p className="text-sm font-semibold text-primary">
             Aquí se viene a ganar. Y a divertirse, claro.
           </p>
