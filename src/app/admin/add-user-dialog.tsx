@@ -61,6 +61,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   const { toast } = useToast();
   const { addUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -80,6 +81,7 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
     try {
         const { street, city, state, postalCode, country, confirmPassword, ...restOfValues } = values;
         const address = { street, city, state, postalCode, country };
@@ -93,6 +95,8 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "No se pudo crear el usuario.";
         toast({ variant: "destructive", title: "Error", description: errorMessage });
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -275,8 +279,8 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
                 <DialogClose asChild>
                     <Button type="button" variant="secondary">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                   {form.formState.isSubmitting && <Loader2 className="mr-2 animate-spin" />}
+                <Button type="submit" disabled={isLoading}>
+                   {isLoading && <Loader2 className="mr-2 animate-spin" />}
                    Añadir Usuario
                 </Button>
             </DialogFooter>

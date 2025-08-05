@@ -158,24 +158,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
     
-    // This function creates a user document in Firestore.
-    // In a real app, you would also need a backend process (like a Cloud Function)
-    // to create the corresponding Firebase Auth user to allow them to log in.
-    const newUser: Omit<UserProfile, 'id' | 'createdAt'> = {
-      ...userData,
-      isVerified: userData.isVerified || false,
-      avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
-      tickets: [],
-      mustChangePassword: true, // Force password change on first login
-    };
+    // This is a simplified/mocked flow. In a real app, this would be a secure backend (Cloud Function) operation.
+    // 1. Create the user in Firebase Auth
+    // NOTE: This is NOT how you would do it in a real client-side app. This is a placeholder.
+    // We are temporarily creating the user on the client, which is insecure.
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password || 'password123');
+        const user = userCredential.user;
 
-    await addDoc(collection(db, "users"), {
-        ...newUser,
-        createdAt: serverTimestamp()
-    });
+        // 2. Create the user document in Firestore
+        const newUserProfile: Omit<UserProfile, 'id' | 'createdAt'> = {
+            ...userData,
+            isVerified: userData.isVerified || false,
+            avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
+            tickets: [],
+            mustChangePassword: true,
+        };
 
-    // Fetch all users again to get the updated list
-    await fetchAllUsers();
+        await setDoc(doc(db, "users", user.uid), {
+            ...newUserProfile,
+            createdAt: serverTimestamp(),
+        });
+        
+        // 3. Log the admin back in (since createUserWithEmailAndPassword signs the new user in)
+        if(MOCK_ADMIN_USER.password) {
+          await signInWithEmailAndPassword(auth, MOCK_ADMIN_USER.email, MOCK_ADMIN_USER.password);
+        }
+
+        // 4. Fetch all users again to get the updated list
+        await fetchAllUsers();
+
+    } catch (error) {
+        console.error("Error creating user:", error);
+        if (error instanceof Error && error.message.includes('auth/email-already-in-use')) {
+            throw new Error('Este email ya está en uso.');
+        }
+        throw new Error('No se pudo crear el usuario en Firebase.');
+    }
   }
   
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
@@ -215,7 +234,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // For this simulation, we will delete the Firestore document.
     // NOTE: This does NOT delete the Firebase Auth user, which would require an admin SDK.
     console.warn("deleteUser only removes the Firestore document, not the Auth user.");
-    await deleteDoc(db, "users", userId);
+    await deleteDoc(doc(db, "users", userId));
     await fetchAllUsers();
   }
 
