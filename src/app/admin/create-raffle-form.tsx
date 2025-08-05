@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { generateDescription, GenerateDescriptionInput } from "@/ai/flows/generate-description";
 import { Wand2 } from "lucide-react";
+import { useRaffles } from "@/context/RaffleContext";
 
 
 const formSchema = z.object({
@@ -38,11 +39,13 @@ const formSchema = z.object({
     message: "Por favor, introduce una fecha válida.",
   }),
   image: z.string().url("Por favor, introduce una URL de imagen válida."),
+  aiHint: z.string().optional(),
 });
 
 export function CreateRaffleForm() {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
+  const { addRaffle } = useRaffles();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,6 +57,7 @@ export function CreateRaffleForm() {
       totalTickets: 100,
       drawDate: "",
       image: "https://placehold.co/600x400",
+      aiHint: ""
     },
   });
 
@@ -90,7 +94,12 @@ export function CreateRaffleForm() {
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+    addRaffle({
+      ...values,
+      drawDate: new Date(values.drawDate),
+      description: values.description || "",
+      aiHint: values.aiHint || ""
+    });
     toast({
       title: "¡Rifa Creada!",
       description: `La rifa "${values.title}" ha sido creada exitosamente.`,

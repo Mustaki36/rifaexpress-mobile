@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { MOCK_RAFFLES } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,10 +38,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Raffle } from "@/lib/types";
+import { useRaffles } from "@/context/RaffleContext";
 
 export function RafflesList() {
   const { toast } = useToast();
-  const [raffles, setRaffles] = useState<Raffle[]>(MOCK_RAFFLES);
+  const { raffles, deleteRaffle } = useRaffles();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [raffleToDelete, setRaffleToDelete] = useState<string | null>(null);
 
@@ -78,7 +78,7 @@ export function RafflesList() {
 
   const handleDelete = () => {
     if (raffleToDelete) {
-      setRaffles(raffles.filter((r) => r.id !== raffleToDelete));
+      deleteRaffle(raffleToDelete);
       toast({
         title: "Rifa eliminada",
         description: "La rifa ha sido eliminada exitosamente.",

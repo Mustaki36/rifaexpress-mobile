@@ -1,10 +1,14 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RaffleCard } from "@/components/raffle-card";
-import { MOCK_RAFFLES } from "@/lib/data";
 import { Filter, Search } from "lucide-react";
+import { useRaffles } from "@/context/RaffleContext";
 
 export default function Home() {
+  const { raffles } = useRaffles();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <section className="text-center mb-12">
@@ -28,7 +32,7 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {MOCK_RAFFLES.map((raffle) => (
+        {raffles.map((raffle) => (
           <RaffleCard key={raffle.id} raffle={raffle} />
         ))}
       </div>

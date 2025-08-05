@@ -3,17 +3,18 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import { MOCK_RAFFLES } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NumberGrid } from "@/components/number-grid";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Tag, Ticket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRaffles } from "@/context/RaffleContext";
 
 export default function RafflePage() {
   const params = useParams();
-  const raffle = MOCK_RAFFLES.find((r) => r.id === params.id);
+  const { raffles } = useRaffles();
+  const raffle = raffles.find((r) => r.id === params.id);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const { toast } = useToast();
 
