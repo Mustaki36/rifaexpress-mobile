@@ -36,3 +36,16 @@ export type UserProfile = {
     ticketNumbers: number[];
   }[];
 };
+
+export type VerificationInfo = {
+  code: string;
+  expiresAt: Date;
+  attempts: number;
+};
+
+export type BlockedUser = {
+  email: string;
+  blockedAt: Date;
+  reason: string;
+  notes: string;
+};

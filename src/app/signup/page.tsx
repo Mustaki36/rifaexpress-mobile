@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2 } from "lucide-react";
+import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock } from "lucide-react";
 import React, { useRef, useState, useEffect } from 'react';
 import { verifyIdentity, VerifyIdentityInput } from "@/ai/flows/verify-identity-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -31,6 +31,7 @@ const formSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
   phone: z.string().min(8, "El número de teléfono no es válido."),
   address: z.string().min(10, "La dirección debe tener al menos 10 caracteres."),
+  verificationCode: z.string().optional(),
   isOfAge: z.boolean().refine(val => val === true, {
     message: "Debes confirmar que eres mayor de edad.",
   }),
@@ -39,7 +40,7 @@ const formSchema = z.object({
 type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
 
 export default function SignupPage() {
-  const { signup } = useAuth();
+  const { signup, requestVerificationCode, verifyCode, isEmailBlocked } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -47,8 +48,38 @@ export default function SignupPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedUserImage, setCapturedUserImage] = useState<string | null>(null);
   const [licenseImage, setLicenseImage] = useState<string | null>(null);
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('idle');
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [idVerificationStatus, setIdVerificationStatus] = useState<VerificationStatus>('idle');
+  const [idVerificationError, setIdVerificationError] = useState<string | null>(null);
+
+  const [codeSent, setCodeSent] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else {
+      setCodeSent(false);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+  
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      phone: "",
+      address: "",
+      verificationCode: "",
+      isOfAge: false,
+    },
+  });
+
+  const emailValue = form.watch("email");
 
   useEffect(() => {
     if (!isVerificationEnabled) return;
@@ -85,19 +116,6 @@ export default function SignupPage() {
     }
   }, [toast, isVerificationEnabled]);
   
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      phone: "",
-      address: "",
-      isOfAge: false,
-    },
-  });
-  
   const handleCaptureUserImage = () => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas');
@@ -128,8 +146,8 @@ export default function SignupPage() {
         return;
     }
 
-    setVerificationStatus('verifying');
-    setVerificationError(null);
+    setIdVerificationStatus('verifying');
+    setIdVerificationError(null);
 
     try {
         const input: VerifyIdentityInput = {
@@ -139,37 +157,77 @@ export default function SignupPage() {
         const result = await verifyIdentity(input);
 
         if (result.isVerified && result.isOfAge) {
-            setVerificationStatus('success');
+            setIdVerificationStatus('success');
             toast({ title: "¡Verificación exitosa!", description: "Tu identidad ha sido confirmada." });
         } else {
-            setVerificationStatus('error');
+            setIdVerificationStatus('error');
             let errorReason = result.reason || "No se pudo verificar la identidad.";
             if(!result.isOfAge) errorReason = "La IA ha determinado que no eres mayor de edad.";
             if(!result.isMatch) errorReason = "La foto del documento no coincide con tu foto.";
-            setVerificationError(errorReason);
+            setIdVerificationError(errorReason);
             toast({ variant: "destructive", title: "Verificación fallida", description: errorReason});
         }
     } catch (error) {
         console.error(error);
         const errorMessage = error instanceof Error ? error.message : "No se pudo realizar la verificación.";
-        setVerificationStatus('error');
-        setVerificationError(errorMessage);
+        setIdVerificationStatus('error');
+        setIdVerificationError(errorMessage);
         toast({ variant: "destructive", title: "Error en la verificación", description: errorMessage });
     }
   }
 
+  const handleRequestCode = async () => {
+    const email = form.getValues("email");
+    const emailError = form.getFieldState("email").error;
+    
+    if (!email || emailError) {
+      toast({ variant: "destructive", title: "Email inválido", description: "Por favor, introduce un email válido para enviar el código." });
+      return;
+    }
+
+    if (isEmailBlocked(email)) {
+       toast({ variant: "destructive", title: "Email Bloqueado", description: "Este email ha sido bloqueado por demasiados intentos fallidos." });
+      return;
+    }
+
+    setIsSendingCode(true);
+    try {
+      await requestVerificationCode(email);
+      toast({ title: "Código enviado", description: `Se ha enviado un código de verificación a ${email}.` });
+      setCodeSent(true);
+      setCountdown(60);
+    } catch (error) {
+       if (error instanceof Error) {
+        toast({ variant: "destructive", title: "Error", description: error.message });
+      }
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (isVerificationEnabled && verificationStatus !== 'success') {
+    if (isVerificationEnabled && idVerificationStatus !== 'success') {
       toast({
         variant: "destructive",
-        title: "Verificación requerida",
-        description: "Debes verificar tu identidad antes de crear la cuenta.",
+        title: "Verificación de ID requerida",
+        description: "Debes verificar tu identidad con tu licencia antes de crear la cuenta.",
       });
       return;
     }
+
+    if (!values.verificationCode) {
+       toast({ variant: "destructive", title: "Código requerido", description: "Por favor, introduce el código de verificación enviado a tu email." });
+       return;
+    }
     
     try {
+      const isCodeValid = verifyCode(values.email, values.verificationCode);
+      if (!isCodeValid) {
+         toast({ variant: "destructive", title: "Código incorrecto", description: "El código de verificación no es válido. Inténtalo de nuevo." });
+         return;
+      }
+
       signup(values.name, values.email, values.password, values.phone, values.address, isVerificationEnabled);
       toast({
         title: "¡Cuenta Creada!",
@@ -187,15 +245,15 @@ export default function SignupPage() {
     }
   };
 
-  const VerificationStatusAlert = () => {
-    switch (verificationStatus) {
+  const IdVerificationStatusAlert = () => {
+    switch (idVerificationStatus) {
         case 'success':
             return (
                 <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500 text-green-900 dark:text-green-100">
                     <CheckCircle2 className="h-4 w-4 !text-green-500" />
                     <AlertTitle>Identidad Verificada</AlertTitle>
                     <AlertDescription>
-                        ¡Perfecto! Hemos confirmado tu identidad. Ya puedes crear tu cuenta.
+                        ¡Perfecto! Hemos confirmado tu identidad.
                     </AlertDescription>
                 </Alert>
             );
@@ -203,9 +261,9 @@ export default function SignupPage() {
             return (
                 <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Verificación Fallida</AlertTitle>
+                    <AlertTitle>Verificación de ID Fallida</AlertTitle>
                     <AlertDescription>
-                        {verificationError || "No pudimos verificar tu identidad. Inténtalo de nuevo."}
+                        {idVerificationError || "No pudimos verificar tu identidad. Inténtalo de nuevo."}
                     </AlertDescription>
                 </Alert>
             );
@@ -214,7 +272,7 @@ export default function SignupPage() {
     }
   }
 
-  const isSubmitDisabled = isVerificationEnabled && verificationStatus !== 'success';
+  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || isEmailBlocked(emailValue);
 
   return (
     <div className="container flex items-center justify-center py-12">
@@ -242,20 +300,7 @@ export default function SignupPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="tu@email.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
+                 <FormField
                   control={form.control}
                   name="password"
                   render={({ field }) => (
@@ -268,6 +313,47 @@ export default function SignupPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="tu@email.com" {...field} disabled={countdown > 0} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <div className="space-y-2">
+                     <FormLabel>Verificación de Email</FormLabel>
+                     <Button type="button" onClick={handleRequestCode} disabled={countdown > 0 || isSendingCode || !emailValue || !!form.getFieldState("email").error} className="w-full">
+                        {isSendingCode ? <Loader2 className="mr-2 animate-spin" /> : <Send className="mr-2" />}
+                        {countdown > 0 ? `Reenviar en ${countdown}s` : "Enviar código"}
+                     </Button>
+                   </div>
+                </div>
+
+                 <FormField
+                  control={form.control}
+                  name="verificationCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código de Verificación</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Introduce el código de 6 dígitos" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormField
                   control={form.control}
                   name="phone"
@@ -281,20 +367,21 @@ export default function SignupPage() {
                     </FormItem>
                   )}
                 />
-              </div>
-               <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dirección</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Calle Falsa 123, Springfield" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dirección</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Calle Falsa 123, Springfield" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+               </div>
+                
 
                 {isVerificationEnabled && (
                   <Card className="bg-muted/50">
@@ -327,11 +414,11 @@ export default function SignupPage() {
                                   <Input id="license-upload" type="file" accept="image/*" onChange={handleLicenseUpload} className="mt-2 file:text-primary file:font-bold" />
                             </div>
                           </div>
-                          <Button type="button" onClick={handleVerifyIdentity} disabled={!capturedUserImage || !licenseImage || verificationStatus === 'verifying' || verificationStatus === 'success'} className="w-full">
-                              {verificationStatus === 'verifying' && <Loader2 className="mr-2 animate-spin" />}
-                              {verificationStatus === 'success' ? <><CheckCircle2 className="mr-2"/> Verificado</> : 'Verificar Identidad con IA'}
+                          <Button type="button" onClick={handleVerifyIdentity} disabled={!capturedUserImage || !licenseImage || idVerificationStatus === 'verifying' || idVerificationStatus === 'success'} className="w-full">
+                              {idVerificationStatus === 'verifying' && <Loader2 className="mr-2 animate-spin" />}
+                              {idVerificationStatus === 'success' ? <><CheckCircle2 className="mr-2"/> Verificado</> : 'Verificar Identidad con IA'}
                           </Button>
-                          <VerificationStatusAlert />
+                          <IdVerificationStatusAlert />
                       </CardContent>
                   </Card>
                 )}
@@ -358,7 +445,7 @@ export default function SignupPage() {
                   />
 
               <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
-                Crear Cuenta
+                {isEmailBlocked(emailValue) ? "Email Bloqueado" : "Crear Cuenta"}
               </Button>
             </form>
           </Form>

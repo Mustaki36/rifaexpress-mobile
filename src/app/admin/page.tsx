@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateRaffleForm } from "./create-raffle-form";
 import { RafflesList } from "./raffles-list";
-import { Ticket, ListOrdered, Shield, LogOut, History } from "lucide-react";
+import { Ticket, ListOrdered, Shield, LogOut, History, ShieldX } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
 import { SecuritySettingsForm } from "./security-settings-form";
 import { Button } from "@/components/ui/button";
 import { HistoryList } from "./history-list";
+import { BlockedUsersList } from "./blocked-users-list";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -44,14 +45,14 @@ export default function AdminPage() {
       </section>
 
       <Tabs defaultValue="create" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
+        <TabsList className="grid w-full grid-cols-5 max-w-3xl mx-auto">
           <TabsTrigger value="create">
             <Ticket className="mr-2" />
             Crear Rifa
           </TabsTrigger>
           <TabsTrigger value="manage">
             <ListOrdered className="mr-2" />
-            Gestionar Rifas
+            Gestionar
           </TabsTrigger>
           <TabsTrigger value="history">
             <History className="mr-2" />
@@ -60,6 +61,10 @@ export default function AdminPage() {
           <TabsTrigger value="security">
             <Shield className="mr-2" />
             Seguridad
+          </TabsTrigger>
+           <TabsTrigger value="blocked">
+            <ShieldX className="mr-2" />
+            Bloqueos
           </TabsTrigger>
         </TabsList>
         <TabsContent value="create">
@@ -71,8 +76,11 @@ export default function AdminPage() {
         <TabsContent value="history">
             <HistoryList />
         </TabsContent>
-         <TabsContent value="security">
+        <TabsContent value="security">
             <SecuritySettingsForm />
+        </TabsContent>
+        <TabsContent value="blocked">
+            <BlockedUsersList />
         </TabsContent>
       </Tabs>
     </div>
