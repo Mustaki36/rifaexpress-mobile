@@ -1,9 +1,19 @@
+"use client";
+
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateRaffleForm } from "./create-raffle-form";
 import { RafflesList } from "./raffles-list";
 import { Ticket, ListOrdered } from "lucide-react";
+import { AdminLoginForm } from "./login-form";
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  if (!isAuthenticated) {
+    return <AdminLoginForm onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <section className="text-center mb-12">
