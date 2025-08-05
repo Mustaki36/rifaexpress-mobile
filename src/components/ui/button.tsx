@@ -42,8 +42,8 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    
     const hoverSoundUrl = "https://files.catbox.moe/pjcild.mp3";
+    const soundTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
     const playHoverSound = () => {
         try {
@@ -53,12 +53,26 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             console.error("Error playing hover sound:", e);
         }
     };
+
+    const handleMouseEnter = () => {
+        if (soundTimeoutRef.current) {
+            clearTimeout(soundTimeoutRef.current);
+        }
+        soundTimeoutRef.current = setTimeout(playHoverSound, 500);
+    };
+
+    const handleMouseLeave = () => {
+        if (soundTimeoutRef.current) {
+            clearTimeout(soundTimeoutRef.current);
+        }
+    };
     
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        onMouseEnter={playHoverSound}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         {...props}
       />
     )

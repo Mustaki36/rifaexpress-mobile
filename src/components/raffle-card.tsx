@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Clock, Ticket, BadgeCheck } from "lucide-react";
 import type { Raffle } from "@/lib/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { CountdownTimer } from "./countdown-timer";
@@ -50,6 +50,8 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   const isSoldOut = progress >= 100;
   const cardOpenSoundUrl = "https://files.catbox.moe/01lxup.mp3";
   const hoverSoundUrl = "https://files.catbox.moe/pjcild.mp3";
+  const soundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(raffle.drawDate).totalSeconds);
 
@@ -88,13 +90,27 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
     }
   };
 
+  const handleMouseEnter = () => {
+    if (soundTimeoutRef.current) {
+        clearTimeout(soundTimeoutRef.current);
+    }
+    soundTimeoutRef.current = setTimeout(playHoverSound, 500);
+  };
+
+  const handleMouseLeave = () => {
+      if (soundTimeoutRef.current) {
+          clearTimeout(soundTimeoutRef.current);
+      }
+  };
+
 
   return (
     <Card className={cn(
         "flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
         isSoldOut && totalSecondsLeft > 0 && totalSecondsLeft <= 300 && "animate-pulse border-primary border-2 shadow-primary/50"
         )}
-        onMouseEnter={playHoverSound}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         >
       <CardHeader className="p-0">
         <Link href={`/raffles/${raffle.id}`} aria-label={raffle.title} onClick={handleCardClick}>
