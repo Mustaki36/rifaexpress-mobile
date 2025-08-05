@@ -21,24 +21,26 @@ export function MainNav() {
         Resultados
       </Link>
        {user?.role === 'creator' && (
-         <Button variant="ghost" asChild>
-          <Link href="/raffles/create">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Crear Rifa
+         <>
+          <Button variant="ghost" asChild>
+            <Link href="/raffles/create">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear Rifa
+            </Link>
+          </Button>
+           <Link
+            href="/admin"
+            className="transition-colors hover:text-primary text-muted-foreground"
+          >
+            Admin
           </Link>
-         </Button>
+         </>
       )}
       <Link
         href="/profile"
         className="transition-colors hover:text-primary text-muted-foreground"
       >
         Mi Perfil
-      </Link>
-      <Link
-        href="/admin"
-        className="transition-colors hover:text-primary text-muted-foreground"
-      >
-        Admin
       </Link>
     </nav>
   );
