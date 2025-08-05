@@ -7,10 +7,12 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "./ui/button";
 import { PlusCircle, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export function MainNav() {
   const { user } = useAuth();
   const [isClient, setIsClient] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsClient(true);
@@ -23,12 +25,14 @@ export function MainNav() {
   }
 
   const handleRifasClick = () => {
-    const soundUrl = "https://files.catbox.moe/aaulmt.mp3";
-    try {
-        const audio = new Audio(soundUrl);
-        audio.play();
-    } catch (e) {
-        console.error("Error playing sound:", e);
+    if (pathname !== '/') {
+      const soundUrl = "https://files.catbox.moe/aaulmt.mp3";
+      try {
+          const audio = new Audio(soundUrl);
+          audio.play();
+      } catch (e) {
+          console.error("Error playing sound:", e);
+      }
     }
   };
 
