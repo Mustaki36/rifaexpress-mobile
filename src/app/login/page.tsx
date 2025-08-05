@@ -64,7 +64,7 @@ export default function LoginPage() {
        const errorMessage = error instanceof Error ? error.message : "Email o contraseña incorrectos.";
        // Customize error messages from Firebase
         let friendlyMessage = "Email o contraseña incorrectos.";
-        if (errorMessage.includes("auth/invalid-credential")) {
+        if (errorMessage.includes("auth/invalid-credential") || errorMessage.includes("auth/user-not-found") || errorMessage.includes("auth/wrong-password")) {
             friendlyMessage = "Las credenciales proporcionadas no son correctas. Por favor, inténtalo de nuevo."
         }
        

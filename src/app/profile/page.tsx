@@ -46,7 +46,7 @@ export default function ProfilePage() {
     }
   };
   
-  const getRoleVariant = (role: 'regular' | 'creator' | 'admin') => {
+  const getRoleVariant = (role: 'regular' | 'creator' | 'admin'): "default" | "secondary" | "destructive" => {
     switch (role) {
       case 'admin':
         return 'destructive';

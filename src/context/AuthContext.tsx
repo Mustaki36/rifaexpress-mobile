@@ -9,7 +9,7 @@ import {
     signOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
 import { MOCK_ADMIN_USER } from '@/lib/data';
@@ -98,9 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado.");
     }
     
-    // Admin login is special cased and doesn't hit Firebase Auth
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
-      // Simulate a Firebase user object for the admin to satisfy other parts of the app
       setFirebaseUser({ email: MOCK_ADMIN_USER.email } as FirebaseUser);
       setCurrentUser(MOCK_ADMIN_USER);
       return MOCK_ADMIN_USER;
@@ -112,6 +110,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (userDocSnap.exists()) {
         const userData = { id: userCredential.user.uid, ...userDocSnap.data() } as UserProfile;
+        
+        // This is a client-side mock check. A real app would use a server/custom claims.
+        if (userData.password !== pass) {
+            throw new Error("auth/invalid-credential");
+        }
+
         setCurrentUser(userData);
         return userData;
     }
@@ -145,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        role,
        avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
        tickets: [],
-       password,
+       password: pass, 
        mustChangePassword: false,
     };
 
@@ -162,10 +166,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
     
-    // In a real app, this should be a Cloud Function that uses the Admin SDK.
-    // We are simulating this by adding the user to Firestore directly.
-    // The user will not be able to log in until an admin sets up their Auth account.
-    console.warn(`Simulating Auth creation for ${userData.email}. In production, use a Cloud Function with the Admin SDK to create the user in Firebase Auth.`);
+    const q = query(collection(db, "users"), where("email", "==", userData.email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        throw new Error("Este email ya está registrado.");
+    }
+    
+    console.warn(`IMPORTANT: This flow creates a user record in Firestore but NOT in Firebase Auth. The user must sign up themselves, or you need a backend function to create Auth users.`);
 
     try {
         const newUserProfileData = {
@@ -177,11 +184,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isVerified: userData.isVerified || false,
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
-          mustChangePassword: true,
-          password: userData.password,
+          mustChangePassword: true, // User must change password on first login
+          password: userData.password, // This is a temporary password
           createdAt: new Date(),
         };
 
+        // We can't create a Firebase Auth user from the client like this.
+        // We will add them to firestore, and they will need to login and set a password.
         const docRef = await addDoc(collection(db, "users"), {
             ...newUserProfileData,
             createdAt: serverTimestamp()
@@ -216,7 +225,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      console.warn("Password change is mocked. In a real app, use Firebase Auth's updatePassword.");
+      console.warn("This flow only updates the password stored in Firestore, not in Firebase Auth. A robust implementation requires server-side logic or re-authentication.");
       await editUser(userId, { password: newPass, mustChangePassword: false });
   }
 
