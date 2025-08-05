@@ -17,6 +17,7 @@ import type { Raffle } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
+import { CountdownTimer } from "./countdown-timer";
 
 interface RaffleCardProps {
   raffle: Raffle;
@@ -51,8 +52,6 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(raffle.drawDate).totalSeconds);
 
   useEffect(() => {
-     if (!isSoldOut) return;
-
     const timer = setTimeout(() => {
         const { timeLeft, totalSeconds } = calculateTimeLeft(raffle.drawDate);
         setTimeLeft(timeLeft);
@@ -93,29 +92,33 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-grow p-6 pt-0">
-        <div className="mb-4">
-          <p className="text-2xl font-bold text-primary">
-            ${raffle.ticketPrice}
-            <span className="text-sm font-normal text-muted-foreground"> / boleto</span>
-          </p>
-        </div>
-        <div>
-          <div className="flex justify-between items-center text-sm text-muted-foreground mb-1">
-            <span>Boletos vendidos</span>
-            <span>
-              {raffle.soldTickets.length} / {raffle.totalTickets}
-            </span>
-          </div>
-          <Progress value={progress} aria-label={`${progress.toFixed(0)}% de boletos vendidos`} />
-        </div>
+        {isSoldOut ? (
+            <CountdownTimer targetDate={raffle.drawDate.toISOString()} isCard={false} />
+        ) : (
+            <>
+                <div className="mb-4">
+                <p className="text-2xl font-bold text-primary">
+                    ${raffle.ticketPrice}
+                    <span className="text-sm font-normal text-muted-foreground"> / boleto</span>
+                </p>
+                </div>
+                <div>
+                <div className="flex justify-between items-center text-sm text-muted-foreground mb-1">
+                    <span>Boletos vendidos</span>
+                    <span>
+                    {raffle.soldTickets.length} / {raffle.totalTickets}
+                    </span>
+                </div>
+                <Progress value={progress} aria-label={`${progress.toFixed(0)}% de boletos vendidos`} />
+                </div>
+            </>
+        )}
       </CardContent>
       <CardFooter className="flex-col items-start gap-4 p-6 pt-0">
-        <div className="flex items-center text-sm text-muted-foreground">
+         <div className="flex items-center text-sm text-muted-foreground">
           <Clock className="mr-2 h-4 w-4" />
-          {isSoldOut && totalSecondsLeft > 0 ? (
-             <span>Sorteo en: <span className="font-bold text-primary">{countdownText}</span></span>
-          ) : isSoldOut ? (
-             <span>Sorteo finalizado</span>
+          {isSoldOut ? (
+             <span>Sorteo el: <span className="font-bold text-primary">{raffle.drawDate.toLocaleDateString('es-ES', {day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'})}</span></span>
           ) : (
              <span>Sorteo: {raffle.drawDate.toLocaleDateString('es-ES', {day: 'numeric', month: 'long'})}</span>
           )}

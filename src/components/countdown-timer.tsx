@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -5,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface CountdownTimerProps {
     targetDate: string; // ISO string
+    isCard?: boolean;
 }
 
 const calculateTimeLeft = (targetDate: string) => {
@@ -13,17 +15,17 @@ const calculateTimeLeft = (targetDate: string) => {
 
     if (difference > 0) {
         timeLeft = {
-            days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-            hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-            minutes: Math.floor((difference / 1000 / 60) % 60),
-            seconds: Math.floor((difference / 1000) % 60)
+            días: Math.floor(difference / (1000 * 60 * 60 * 24)),
+            horas: Math.floor((difference / (1000 * 60 * 60)) % 24),
+            minutos: Math.floor((difference / 1000 / 60) % 60),
+            segundos: Math.floor((difference / 1000) % 60)
         };
     }
 
     return timeLeft;
 };
 
-export function CountdownTimer({ targetDate }: CountdownTimerProps) {
+export function CountdownTimer({ targetDate, isCard = true }: CountdownTimerProps) {
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft(targetDate));
 
     useEffect(() => {
@@ -37,35 +39,33 @@ export function CountdownTimer({ targetDate }: CountdownTimerProps) {
     const timerComponents: JSX.Element[] = [];
 
     Object.keys(timeLeft).forEach((interval) => {
-        if (!timeLeft[interval as keyof typeof timeLeft]) {
-             if (timerComponents.length > 0) { // Add 0 if it's not the first element and value is 0
-                 timerComponents.push(
-                    <div key={interval} className="flex flex-col items-center">
-                        <span className="text-4xl md:text-6xl font-bold text-primary tabular-nums">
-                            {String(0).padStart(2, '0')}
-                        </span>
-                        <span className="text-sm md:text-base text-muted-foreground uppercase tracking-wider">{interval}</span>
-                    </div>
-                );
-             }
-        } else {
-            timerComponents.push(
-                <div key={interval} className="flex flex-col items-center">
-                    <span className="text-4xl md:text-6xl font-bold text-primary tabular-nums">
-                        {String(timeLeft[interval as keyof typeof timeLeft]).padStart(2, '0')}
-                    </span>
-                    <span className="text-sm md:text-base text-muted-foreground uppercase tracking-wider">{interval}</span>
-                </div>
-            );
-        }
+        const value = timeLeft[interval as keyof typeof timeLeft];
+        if (!value && value !== 0) return; // Skip if interval doesn't exist
+
+        timerComponents.push(
+            <div key={interval} className="flex flex-col items-center">
+                <span className="text-3xl md:text-4xl font-bold text-primary tabular-nums">
+                    {String(value).padStart(2, '0')}
+                </span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">{interval}</span>
+            </div>
+        );
     });
+
+    const content = (
+         <div className="flex justify-around">
+            {timerComponents.length ? timerComponents : <span className="py-8">¡El sorteo ha comenzado!</span>}
+        </div>
+    );
+    
+    if (!isCard) {
+        return content;
+    }
 
     return (
         <Card className="w-full">
-            <CardContent className="p-6">
-                <div className="flex justify-around">
-                     {timerComponents.length ? timerComponents : <span>¡El sorteo ha comenzado!</span>}
-                </div>
+            <CardContent className="p-4">
+              {content}
             </CardContent>
         </Card>
     );
