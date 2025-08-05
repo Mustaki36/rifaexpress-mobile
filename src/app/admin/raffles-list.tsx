@@ -45,11 +45,13 @@ import { useRaffles } from "@/context/RaffleContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { Raffle } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
 type SortOption = "recent" | "oldest" | "highest_progress" | "lowest_progress" | "price_asc" | "price_desc";
 
 export function RafflesList() {
   const { toast } = useToast();
+  const router = useRouter();
   const { raffles, deleteRaffle } = useRaffles();
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [raffleToDelete, setRaffleToDelete] = useState<string | null>(null);
@@ -122,11 +124,7 @@ export function RafflesList() {
   };
   
   const handleEdit = (raffleId: string) => {
-    toast({
-        title: "Función no implementada",
-        description: "La edición de rifas se implementará en el futuro."
-    });
-    console.log("Edit raffle", raffleId);
+    router.push(`/raffles/edit/${raffleId}`);
   }
 
   const confirmDelete = (raffleId: string) => {
@@ -313,5 +311,3 @@ export function RafflesList() {
     </>
   );
 }
-
-    

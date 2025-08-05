@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -10,6 +11,7 @@ interface RaffleContextType {
   raffles: Raffle[];
   reservedTickets: ReservedTicket[];
   addRaffle: (raffle: Omit<Raffle, 'id' | 'soldTickets'>) => void;
+  editRaffle: (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => void;
   deleteRaffle: (raffleId: string) => void;
   reserveTicket: (raffleId: string, number: number, userId: string) => boolean;
   releaseTicket: (raffleId: string, number: number, userId: string) => void;
@@ -40,6 +42,12 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
       soldTickets: [],
     };
     setRaffles(prev => [newRaffle, ...prev]);
+  };
+
+  const editRaffle = (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => {
+    setRaffles(prev => prev.map(raffle => 
+        raffle.id === raffleId ? { ...raffle, ...raffleData } : raffle
+    ));
   };
 
   const deleteRaffle = (raffleId: string) => {
@@ -104,7 +112,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <RaffleContext.Provider value={{ raffles, reservedTickets, addRaffle, deleteRaffle, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser }}>
+    <RaffleContext.Provider value={{ raffles, reservedTickets, addRaffle, editRaffle, deleteRaffle, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser }}>
       {children}
     </RaffleContext.Provider>
   );
