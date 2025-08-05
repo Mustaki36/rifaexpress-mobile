@@ -1,4 +1,4 @@
-import type { User } from "lucide-react";
+import type { Timestamp } from "firebase/firestore";
 
 export type Raffle = {
   id: string;
@@ -13,6 +13,7 @@ export type Raffle = {
   aiHint: string;
   creatorId: string; // user ID
   status?: 'open' | 'closed';
+  createdAt: Timestamp;
 };
 
 export type RaffleResult = {
@@ -42,7 +43,7 @@ export type UserProfile = {
   isVerified: boolean;
   avatar: string;
   role: 'regular' | 'creator' | 'admin';
-  createdAt: Date;
+  createdAt: Date | Timestamp;
   mustChangePassword?: boolean;
   tickets: {
     raffleId: string;

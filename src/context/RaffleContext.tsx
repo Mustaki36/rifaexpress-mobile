@@ -2,28 +2,53 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import { db } from '@/lib/firebase';
 import type { Raffle, ReservedTicket } from '@/lib/types';
-import { MOCK_RAFFLES } from '@/lib/data';
 
 const RESERVATION_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
 interface RaffleContextType {
   raffles: Raffle[];
   reservedTickets: ReservedTicket[];
-  addRaffle: (raffle: Omit<Raffle, 'id' | 'soldTickets'>) => void;
-  editRaffle: (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => void;
-  deleteRaffle: (raffleId: string) => void;
+  loading: boolean;
+  addRaffle: (raffle: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => Promise<void>;
+  editRaffle: (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => Promise<void>;
+  deleteRaffle: (raffleId: string) => Promise<void>;
   reserveTicket: (raffleId: string, number: number, userId: string) => boolean;
   releaseTicket: (raffleId: string, number: number, userId: string) => void;
   releaseTicketsForUser: (userId: string, raffleId: string) => void;
-  purchaseTickets: (raffleId: string, numbers: number[], userId: string) => void;
+  purchaseTickets: (raffleId: string, numbers: number[], userId: string) => Promise<void>;
 }
 
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
 export const RaffleProvider = ({ children }: { children: ReactNode }) => {
-  const [raffles, setRaffles] = useState<Raffle[]>(MOCK_RAFFLES);
+  const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Set up a real-time listener for raffles
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const rafflesData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          drawDate: data.drawDate.toDate(), // Convert Firestore Timestamp to Date
+        } as Raffle;
+      });
+      setRaffles(rafflesData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
 
   // Periodically clean up expired reservations
   useEffect(() => {
@@ -35,23 +60,23 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
 
-  const addRaffle = (raffleData: Omit<Raffle, 'id' | 'soldTickets'>) => {
-    const newRaffle: Raffle = {
-      ...raffleData,
-      id: `raffle-${Date.now()}-${Math.random()}`,
-      soldTickets: [],
-    };
-    setRaffles(prev => [newRaffle, ...prev]);
+  const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
+    await addDoc(collection(db, "raffles"), {
+        ...raffleData,
+        soldTickets: [],
+        status: 'open',
+        createdAt: serverTimestamp(),
+    });
   };
 
-  const editRaffle = (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => {
-    setRaffles(prev => prev.map(raffle => 
-        raffle.id === raffleId ? { ...raffle, ...raffleData } : raffle
-    ));
+  const editRaffle = async (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => {
+    const raffleDocRef = doc(db, "raffles", raffleId);
+    await updateDoc(raffleDocRef, raffleData);
   };
 
-  const deleteRaffle = (raffleId: string) => {
-    setRaffles(prev => prev.filter(raffle => raffle.id !== raffleId));
+  const deleteRaffle = async (raffleId: string) => {
+    const raffleDocRef = doc(db, "raffles", raffleId);
+    await deleteDoc(raffleDocRef);
   };
   
   const reserveTicket = (raffleId: string, number: number, userId: string): boolean => {
@@ -92,27 +117,27 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
       ))
   }, []);
 
-  const purchaseTickets = (raffleId: string, numbers: number[], userId: string) => {
-     // 1. Move reserved tickets to sold
-     setRaffles(prev => prev.map(r => {
-        if (r.id === raffleId) {
-            return { ...r, soldTickets: [...r.soldTickets, ...numbers].sort((a,b) => a-b) };
-        }
-        return r;
-     }));
-     // 2. Remove the reservations that were just purchased
+  const purchaseTickets = async (raffleId: string, numbers: number[], userId: string) => {
+     const raffleDocRef = doc(db, "raffles", raffleId);
+     const raffle = raffles.find(r => r.id === raffleId);
+     if (!raffle) throw new Error("Raffle not found");
+
+     // In a real high-concurrency app, you'd use a transaction here.
+     // For this app, a simple update is sufficient.
+     const newSoldTickets = [...raffle.soldTickets, ...numbers].sort((a,b) => a-b);
+     await updateDoc(raffleDocRef, {
+        soldTickets: newSoldTickets
+     });
+
+     // Remove the reservations that were just purchased
      setReservedTickets(prev => prev.filter(
         t => !(t.raffleId === raffleId && numbers.includes(t.number) && t.userId === userId)
      ));
-     // 3. Add ticket info to user profile (assuming AuthContext is available or can be updated)
-     // This part is complex as it requires cross-context communication. 
-     // For this mock, we'll skip updating the user's `tickets` array in AuthContext.
-     // In a real app, this would likely be an API call that updates both raffle and user data transactionally.
   };
 
 
   return (
-    <RaffleContext.Provider value={{ raffles, reservedTickets, addRaffle, editRaffle, deleteRaffle, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser }}>
+    <RaffleContext.Provider value={{ raffles, reservedTickets, loading, addRaffle, editRaffle, deleteRaffle, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser }}>
       {children}
     </RaffleContext.Provider>
   );

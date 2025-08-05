@@ -25,7 +25,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { generateDescription, GenerateDescriptionInput } from "@/ai/flows/generate-description";
-import { Wand2 } from "lucide-react";
+import { Wand2, Loader2 } from "lucide-react";
 import { useRaffles } from "@/context/RaffleContext";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -49,6 +49,7 @@ export default function CreateRafflePage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addRaffle } = useRaffles();
   const { user, isAuthenticated } = useAuth();
   
@@ -127,21 +128,29 @@ export default function CreateRafflePage() {
     }
   }
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if(!user) return;
-    addRaffle({
-      ...values,
-      creatorId: user.id,
-      drawDate: new Date(values.drawDate),
-      description: values.description || "",
-      aiHint: values.aiHint || ""
-    });
-    toast({
-      title: "¡Rifa Creada!",
-      description: `La rifa "${values.title}" ha sido creada exitosamente.`,
-    });
-    form.reset();
-    router.push('/profile');
+    setIsSubmitting(true);
+    try {
+        await addRaffle({
+          ...values,
+          creatorId: user.id,
+          drawDate: new Date(values.drawDate),
+          description: values.description || "",
+          aiHint: values.aiHint || ""
+        });
+        toast({
+          title: "¡Rifa Creada!",
+          description: `La rifa "${values.title}" ha sido creada exitosamente.`,
+        });
+        form.reset();
+        router.push('/profile');
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "No se pudo crear la rifa.";
+        toast({ variant: "destructive", title: "Error", description: errorMessage });
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -271,8 +280,9 @@ export default function CreateRafflePage() {
                 )}
                 />
 
-                <Button type="submit" size="lg" className="w-full">
-                Crear Rifa
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 animate-spin" />}
+                    Crear Rifa
                 </Button>
             </form>
             </Form>

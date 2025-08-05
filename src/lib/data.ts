@@ -13,64 +13,8 @@ export const MOCK_ADMIN_USER: UserProfile = {
   tickets: [],
 };
 
-export const MOCK_RAFFLES: Raffle[] = [
-  {
-    id: 'car-2024',
-    title: 'Rifa de Auto 0km',
-    description: 'Participa y gana un auto 0km full equipo. El sueño de tener tu propio vehículo está a un boleto de distancia.',
-    image: 'https://placehold.co/600x400.png',
-    prize: 'Auto Sedán 2024',
-    ticketPrice: 10,
-    totalTickets: 200,
-    soldTickets: Array.from({ length: 110 }, (_, i) => i + 15),
-    drawDate: new Date('2024-09-30T18:00:00'),
-    aiHint: 'new car',
-    creatorId: 'admin-user-id',
-    status: 'open',
-  },
-  {
-    id: 'phone-15-pro',
-    title: 'Último Smartphone de Gama Alta',
-    description: 'No te quedes atrás y gana el último modelo de smartphone. Con la mejor cámara y el procesador más potente del mercado.',
-    image: 'https://placehold.co/600x400.png',
-    prize: 'Smartphone Pro 15',
-    ticketPrice: 5,
-    totalTickets: 150,
-    soldTickets: Array.from({ length: 150 }, (_, i) => i + 1), // This raffle is sold out
-    drawDate: new Date('2024-08-15T20:00:00'),
-    aiHint: 'latest smartphone',
-    creatorId: 'admin-user-id',
-    status: 'closed',
-  },
-  {
-    id: 'console-next-gen',
-    title: 'Consola de Videojuegos de Nueva Generación',
-    description: 'Lleva tu experiencia de juego a otro nivel. Gana la consola más deseada y disfruta de gráficos y velocidades impresionantes.',
-    image: 'https://assets.nintendo.com/image/upload/ar_16:9,c_lpad,w_1065/b_white/f_auto/q_auto/ncom/My%20Nintendo%20Store/EN-US/Nintendo%20Switch%202/Hardware/123669-nintendo-switch-2-package-front-2000x2000',
-    prize: 'Consola de Videojuegos 5',
-    ticketPrice: 7,
-    totalTickets: 100,
-    soldTickets: Array.from({ length: 95 }, (_, i) => i + 1),
-    drawDate: new Date('2024-08-25T20:00:00'),
-    aiHint: 'gaming console',
-    creatorId: 'user-123', // Created by our mock user
-    status: 'open',
-  },
-  {
-    id: 'vacation-caribe',
-    title: 'Viaje al Caribe todo incluido',
-    description: 'Gana unas vacaciones soñadas para dos personas. Disfruta de playas paradisíacas y relájate en el Caribe.',
-    image: 'https://placehold.co/600x400.png',
-    prize: 'Viaje al Caribe',
-    ticketPrice: 20,
-    totalTickets: 300,
-    soldTickets: Array.from({ length: 150 }, (_, i) => i + 50),
-    drawDate: new Date('2024-10-10T20:00:00'),
-    aiHint: 'tropical beach',
-    creatorId: 'admin-user-id',
-    status: 'open',
-  },
-];
+// MOCK_RAFFLES are no longer used as the primary data source.
+// They are kept here for reference or potential database seeding in the future.
 
 export const MOCK_RESULTS: RaffleResult[] = [
   {

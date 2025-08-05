@@ -3,13 +3,13 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { NumberGrid } from "@/components/number-grid";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Tag, Ticket, Trophy, Info, Calendar } from "lucide-react";
+import { Clock, Tag, Ticket, Trophy, Info, Calendar, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRaffles } from "@/context/RaffleContext";
 import { useAuth } from "@/context/AuthContext";
@@ -18,11 +18,14 @@ import { getLotteryInfo, GetLotteryInfoOutput } from "@/ai/flows/get-lottery-inf
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Template from "@/components/template";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function RafflePage() {
   const params = useParams();
+  const router = useRouter();
   const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser } = useRaffles();
-  const { user, isAuthenticated, editUser } = useAuth();
+  const { user, isAuthenticated, firebaseUser } = useAuth();
   const raffleId = params.id as string;
   const raffle = raffles.find((r) => r.id === raffleId);
   
@@ -30,6 +33,7 @@ export default function RafflePage() {
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const [lotteryInfo, setLotteryInfo] = useState<GetLotteryInfoOutput | null>(null);
   const [isLoadingLottery, setIsLoadingLottery] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const { toast } = useToast();
 
@@ -69,11 +73,11 @@ export default function RafflePage() {
   // When the component unmounts (user navigates away), release their reservations
   useEffect(() => {
     return () => {
-      if (user?.id && raffleId) {
-        releaseTicketsForUser(user.id, raffleId);
+      if (firebaseUser?.uid && raffleId) {
+        releaseTicketsForUser(firebaseUser.uid, raffleId);
       }
     };
-  }, [user?.id, raffleId, releaseTicketsForUser]);
+  }, [firebaseUser?.uid, raffleId, releaseTicketsForUser]);
 
   if (!raffle) {
     return (
@@ -85,18 +89,18 @@ export default function RafflePage() {
   }
 
   const handleNumberSelect = (number: number) => {
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !firebaseUser) {
       setIsAuthDialogOpen(true);
       return;
     }
     
     if (selectedNumbers.includes(number)) {
       // User is de-selecting a number
-      releaseTicket(raffle.id, number, user.id);
+      releaseTicket(raffle.id, number, firebaseUser.uid);
       setSelectedNumbers((prev) => prev.filter((n) => n !== number));
     } else {
       // User is selecting a number, try to reserve it
-      const success = reserveTicket(raffle.id, number, user.id);
+      const success = reserveTicket(raffle.id, number, firebaseUser.uid);
       if (success) {
         setSelectedNumbers((prev) => [...prev, number]);
       } else {
@@ -109,7 +113,7 @@ export default function RafflePage() {
     }
   };
   
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (selectedNumbers.length === 0) {
       toast({
         variant: "destructive",
@@ -119,37 +123,52 @@ export default function RafflePage() {
       return;
     }
 
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !firebaseUser) {
       setIsAuthDialogOpen(true);
       return;
     }
     
-    purchaseTickets(raffle.id, selectedNumbers, user.id);
+    setIsPurchasing(true);
+    try {
+        await purchaseTickets(raffle.id, selectedNumbers, firebaseUser.uid);
 
-    const newTicketRecord = {
-        raffleId: raffle.id,
-        raffleTitle: raffle.title,
-        ticketNumbers: selectedNumbers,
-    };
+        // Update user's tickets in Firestore
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            const newTicketRecord = {
+                raffleId: raffle.id,
+                raffleTitle: raffle.title,
+                ticketNumbers: selectedNumbers,
+            };
 
-    const existingRaffleIndex = user.tickets.findIndex(t => t.raffleId === raffle.id);
-    let updatedTickets = [...user.tickets];
+            const existingRaffleIndex = userData.tickets.findIndex((t: any) => t.raffleId === raffle.id);
+            let updatedTickets = [...userData.tickets];
 
-    if (existingRaffleIndex > -1) {
-        const existingRecord = updatedTickets[existingRaffleIndex];
-        const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
-        updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
-    } else {
-        updatedTickets.push(newTicketRecord);
+            if (existingRaffleIndex > -1) {
+                const existingRecord = updatedTickets[existingRaffleIndex];
+                const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
+                updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
+            } else {
+                updatedTickets.push(newTicketRecord);
+            }
+            await updateDoc(userDocRef, { tickets: updatedTickets });
+        }
+        
+        toast({
+            title: "¡Compra exitosa!",
+            description: `Has comprado ${selectedNumbers.length} boleto(s). ¡Mucha suerte!`,
+        });
+        setSelectedNumbers([]);
+        // Optional: redirect to profile page after purchase
+        // router.push('/profile');
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : "No se pudo completar la compra.";
+        toast({ variant: "destructive", title: "Error en la compra", description: errorMessage });
+    } finally {
+        setIsPurchasing(false);
     }
-    
-    editUser(user.id, { tickets: updatedTickets });
-
-    toast({
-        title: "¡Compra exitosa!",
-        description: `Has comprado ${selectedNumbers.length} boleto(s). ¡Mucha suerte!`,
-    });
-    setSelectedNumbers([]);
   }
 
   const totalPrice = selectedNumbers.length * raffle.ticketPrice;
@@ -266,8 +285,9 @@ export default function RafflePage() {
                   </CardContent>
                 </Card>
 
-                <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0}>
-                  Comprar Ahora (${totalPrice.toFixed(2)})
+                <Button size="lg" onClick={handlePurchase} disabled={selectedNumbers.length === 0 || isPurchasing}>
+                  {isPurchasing && <Loader2 className="animate-spin mr-2" />}
+                  {isPurchasing ? 'Procesando...' : `Comprar Ahora ($${totalPrice.toFixed(2)})`}
                 </Button>
               </>
             )}
