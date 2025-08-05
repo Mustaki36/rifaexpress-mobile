@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       phone,
       address,
       isVerified: true, // Set to true after successful AI verification
-      avatar: `https://placehold.co/100x100?text=${name.charAt(0)}`,
+      avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
       tickets: [],
       // In a real app, you would hash the password
     };

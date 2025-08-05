@@ -56,7 +56,7 @@ export function CreateRaffleForm() {
       ticketPrice: 10,
       totalTickets: 100,
       drawDate: "",
-      image: "https://placehold.co/600x400",
+      image: "https://placehold.co/600x400.png",
       aiHint: ""
     },
   });
@@ -228,7 +228,7 @@ export function CreateRaffleForm() {
                 <FormItem>
                   <FormLabel>URL de la Imagen</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://placehold.co/600x400" {...field} />
+                    <Input placeholder="https://placehold.co/600x400.png" {...field} />
                   </FormControl>
                    <FormDescription>
                     Usa una URL de una imagen pública para el premio.
