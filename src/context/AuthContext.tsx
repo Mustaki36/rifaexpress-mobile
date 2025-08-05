@@ -24,7 +24,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<UserProfile | null>;
   logout: () => Promise<void>;
   signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => Promise<void>;
-  addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => Promise<void>;
+  addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => Promise<void>;
   editUser: (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   isEmailBlocked: (email: string) => boolean;
@@ -41,16 +41,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { blockedUsers } = useBlock();
 
   const fetchAllUsers = async () => {
-    const querySnapshot = await getDocs(collection(db, "users"));
-    const usersList = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return { 
-            id: doc.id, 
-            ...data,
-            createdAt: data.createdAt?.toDate() // Convert timestamp to Date
-        } as UserProfile
-    });
-    setAllUsers(usersList);
+    try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usersList = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return { 
+                id: doc.id, 
+                ...data,
+                createdAt: data.createdAt?.toDate() // Convert timestamp to Date
+            } as UserProfile
+        });
+        setAllUsers(usersList);
+    } catch (error) {
+        console.error("Error fetching users: ", error);
+    }
   };
 
 
@@ -109,15 +113,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDocSnap = await getDoc(userDocRef);
 
     if (userDocSnap.exists()) {
-        const userData = { id: userCredential.user.uid, ...userDocSnap.data() } as UserProfile;
+        const userData = userDocSnap.data();
+        const userProfile = { id: userCredential.user.uid, ...userData } as UserProfile;
         
-        // This is a client-side mock check. A real app would use a server/custom claims.
         if (userData.password !== pass) {
             throw new Error("auth/invalid-credential");
         }
 
-        setCurrentUser(userData);
-        return userData;
+        setCurrentUser(userProfile);
+        return userProfile;
     }
 
     return null;
@@ -161,7 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await fetchAllUsers();
   };
 
-  const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified'> & {isVerified?: boolean}) => {
+  const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
      if (isEmailBlocked(userData.email)) {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
@@ -172,7 +176,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Este email ya está registrado.");
     }
     
-    console.warn(`IMPORTANT: This flow creates a user record in Firestore but NOT in Firebase Auth. The user must sign up themselves, or you need a backend function to create Auth users.`);
+    console.warn(`IMPORTANTE: Este flujo crea un registro de usuario en Firestore pero NO en Firebase Auth. Para un inicio de sesión real, el usuario necesitaría registrarse a través del flujo normal o un administrador necesitaría usar una función de backend para crear una cuenta de autenticación.`);
 
     try {
         const newUserProfileData = {
@@ -181,27 +185,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           phone: userData.phone,
           address: userData.address,
           role: userData.role,
-          isVerified: userData.isVerified || false,
+          isVerified: false,
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
-          mustChangePassword: true, // User must change password on first login
-          password: userData.password, // This is a temporary password
-          createdAt: new Date(),
+          mustChangePassword: true,
+          password: userData.password,
+          createdAt: serverTimestamp(),
         };
 
-        // We can't create a Firebase Auth user from the client like this.
-        // We will add them to firestore, and they will need to login and set a password.
-        const docRef = await addDoc(collection(db, "users"), {
-            ...newUserProfileData,
-            createdAt: serverTimestamp()
-        });
-
-        // Add the new user to the local state to force UI update
-        setAllUsers(prevUsers => [...prevUsers, { id: docRef.id, ...newUserProfileData }]);
-
+        const docRef = await addDoc(collection(db, "users"), newUserProfileData);
+        setAllUsers(prevUsers => [...prevUsers, { id: docRef.id, ...newUserProfileData, createdAt: new Date() } as UserProfile]);
 
     } catch (error) {
-        console.error("Error creating user in Firestore:", error);
+        console.error("Error al crear usuario en Firestore:", error);
         throw new Error('No se pudo crear el usuario en Firestore.');
     }
   }
@@ -210,28 +206,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDocRef = doc(db, "users", userId);
     await updateDoc(userDocRef, userData);
     
+    setAllUsers(prevUsers => prevUsers.map(user => user.id === userId ? { ...user, ...userData } : user));
+
     if (currentUser?.id === userId) {
-        const updatedUserDoc = await getDoc(userDocRef);
-        if (updatedUserDoc.exists()) {
-            const data = updatedUserDoc.data();
-            setCurrentUser({ 
-                id: userId, 
-                ...data,
-                createdAt: data.createdAt?.toDate()
-            } as UserProfile);
-        }
+        setCurrentUser(prev => prev ? { ...prev, ...userData } : null);
     }
-    await fetchAllUsers();
   };
 
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      console.warn("This flow only updates the password stored in Firestore, not in Firebase Auth. A robust implementation requires server-side logic or re-authentication.");
       await editUser(userId, { password: newPass, mustChangePassword: false });
   }
 
   const deleteUser = async (userId: string) => {
-    // In a real app, this would be a Cloud Function that also deletes the Firebase Auth user.
-    console.warn(`Deleting user ${userId} from Firestore only. The Auth user still exists.`);
+    console.warn(`Eliminando usuario ${userId} solo de Firestore. El usuario de Auth todavía puede existir.`);
     await deleteDoc(doc(db, "users", userId));
     setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
   }
