@@ -10,7 +10,8 @@ interface CountdownTimerProps {
     isCard?: boolean;
     raffleInfo?: {
         prize: string;
-        drawDate: string;
+        drawDate: string; // Already formatted date string
+        lotteryName?: string;
     }
 }
 
@@ -63,7 +64,7 @@ export function CountdownTimer({ targetDate, isCard = true, raffleInfo }: Countd
             <p className="font-semibold">¡Sorteo en curso!</p>
             {raffleInfo && (
                 <p className="text-xs">
-                    El ganador para <span className="font-bold">{raffleInfo.prize}</span> se anunciará pronto.
+                   El ganador para <span className="font-bold">{raffleInfo.prize}</span> se definirá con el sorteo <span className="font-bold">{raffleInfo.lotteryName}</span> de la Lotería de Puerto Rico el <span className="font-bold">{raffleInfo.drawDate}</span>.
                 </p>
             )}
         </div>
