@@ -49,6 +49,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   const progress = (raffle.soldTickets.length / raffle.totalTickets) * 100;
   const isSoldOut = progress >= 100;
   const cardOpenSoundUrl = "https://files.catbox.moe/01lxup.mp3";
+  const hoverSoundUrl = "https://files.catbox.moe/pjcild.mp3";
 
   const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(raffle.drawDate).totalSeconds);
 
@@ -78,12 +79,23 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
     }
   };
 
+  const playHoverSound = () => {
+    try {
+        const audio = new Audio(hoverSoundUrl);
+        audio.play();
+    } catch (e) {
+        console.error("Error playing hover sound:", e);
+    }
+  };
+
 
   return (
     <Card className={cn(
         "flex flex-col overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02]",
         isSoldOut && totalSecondsLeft > 0 && totalSecondsLeft <= 300 && "animate-pulse border-primary border-2 shadow-primary/50"
-        )}>
+        )}
+        onMouseEnter={playHoverSound}
+        >
       <CardHeader className="p-0">
         <Link href={`/raffles/${raffle.id}`} aria-label={raffle.title} onClick={handleCardClick}>
           <div className="relative h-48 w-full">

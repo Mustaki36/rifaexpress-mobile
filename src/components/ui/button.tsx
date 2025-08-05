@@ -42,10 +42,23 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+    
+    const hoverSoundUrl = "https://files.catbox.moe/pjcild.mp3";
+
+    const playHoverSound = () => {
+        try {
+            const audio = new Audio(hoverSoundUrl);
+            audio.play();
+        } catch (e) {
+            console.error("Error playing hover sound:", e);
+        }
+    };
+    
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
+        onMouseEnter={playHoverSound}
         {...props}
       />
     )
