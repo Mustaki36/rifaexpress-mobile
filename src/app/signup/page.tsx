@@ -454,7 +454,7 @@ export default function SignupPage() {
                   />
               </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                   
                    <div className="space-y-2">
                      <FormLabel>Verificación de Email</FormLabel>
@@ -481,9 +481,7 @@ export default function SignupPage() {
                 </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    
-                    <div className="space-y-2">
-                       <FormLabel className="opacity-0 hidden md:block">Confirmar</FormLabel>
+                    <div className="md:col-span-2">
                        <Button type="button" onClick={handleVerifyCode} disabled={!codeSent || isVerifyingCode || isCodeVerified} className="w-full">
                           {isVerifyingCode && <Loader2 className="mr-2 animate-spin" />}
                           {isCodeVerified ? <><BadgeCheck className="mr-2"/> Verificado</> : 'Verificar Código'}
@@ -601,5 +599,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    
