@@ -118,6 +118,28 @@ export function UsersList() {
   const fullAddress = selectedUser?.address
     ? `${selectedUser.address.street}, ${selectedUser.address.city}, ${selectedUser.address.state} ${selectedUser.address.postalCode}, ${selectedUser.address.country}`
     : "No proporcionada";
+    
+  const getRoleDisplayName = (role: 'regular' | 'creator' | 'admin') => {
+    switch (role) {
+      case 'admin':
+        return 'Administrador';
+      case 'creator':
+        return 'Creador';
+      default:
+        return 'Regular';
+    }
+  };
+  
+  const getRoleVariant = (role: 'regular' | 'creator' | 'admin'): "default" | "secondary" | "destructive" => {
+    switch (role) {
+      case 'admin':
+        return 'destructive';
+      case 'creator':
+        return 'default';
+      default:
+        return 'secondary';
+    }
+  }
 
   return (
     <>
@@ -178,8 +200,8 @@ export function UsersList() {
                         </div>
                       </TableCell>
                        <TableCell>
-                        <Badge variant={user.role === 'creator' ? "default" : "secondary"}>
-                          {user.role === 'creator' ? 'Creador' : 'Regular'}
+                        <Badge variant={getRoleVariant(user.role)}>
+                          {getRoleDisplayName(user.role)}
                         </Badge>
                        </TableCell>
                        <TableCell>
@@ -256,7 +278,7 @@ export function UsersList() {
                     <Card>
                         <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><User />Información Personal</CardTitle></CardHeader>
                         <CardContent className="space-y-3 text-sm">
-                            <div className="flex items-center"><strong className="font-medium text-muted-foreground w-24 inline-block">Rol:</strong> <Badge variant={selectedUser.role === 'creator' ? "default" : "secondary"}>{selectedUser.role === 'creator' ? 'Creador' : 'Regular'}</Badge></div>
+                            <div className="flex items-center"><strong className="font-medium text-muted-foreground w-24 inline-block">Rol:</strong> <Badge variant={getRoleVariant(selectedUser.role)}>{getRoleDisplayName(selectedUser.role)}</Badge></div>
                             <p><strong className="font-medium text-muted-foreground w-24 inline-block">Teléfono:</strong> {selectedUser.phone || 'No disponible'}</p>
                             <p><strong className="font-medium text-muted-foreground w-24 inline-block">Registrado:</strong> {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'N/A'}</p>
                         </CardContent>
