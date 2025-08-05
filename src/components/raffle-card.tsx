@@ -48,6 +48,7 @@ const getLotteryName = (totalTickets: number): string => {
 export function RaffleCard({ raffle }: RaffleCardProps) {
   const progress = (raffle.soldTickets.length / raffle.totalTickets) * 100;
   const isSoldOut = progress >= 100;
+  const cardOpenSoundUrl = "https://files.catbox.moe/01lxup.mp3";
 
   const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(raffle.drawDate).totalSeconds);
 
@@ -68,6 +69,15 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
       hour12: true
   });
 
+  const handleCardClick = () => {
+    try {
+        const audio = new Audio(cardOpenSoundUrl);
+        audio.play();
+    } catch (e) {
+        console.error("Error playing sound:", e);
+    }
+  };
+
 
   return (
     <Card className={cn(
@@ -75,7 +85,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
         isSoldOut && totalSecondsLeft > 0 && totalSecondsLeft <= 300 && "animate-pulse border-primary border-2 shadow-primary/50"
         )}>
       <CardHeader className="p-0">
-        <Link href={`/raffles/${raffle.id}`} aria-label={raffle.title}>
+        <Link href={`/raffles/${raffle.id}`} aria-label={raffle.title} onClick={handleCardClick}>
           <div className="relative h-48 w-full">
             <Image
               src={raffle.image}
@@ -91,7 +101,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
         </Link>
         <div className="p-6 pb-2">
           <CardTitle className="font-headline text-xl leading-tight">
-            <Link href={`/raffles/${raffle.id}`} className="hover:text-primary transition-colors">
+            <Link href={`/raffles/${raffle.id}`} className="hover:text-primary transition-colors" onClick={handleCardClick}>
               {raffle.title}
             </Link>
           </CardTitle>
@@ -133,7 +143,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
           <Clock className="mr-2 h-4 w-4" />
           <span>Sorteo: <span className="font-bold text-primary">{drawDateFormatted}</span></span>
         </div>
-        <Button asChild className="w-full" disabled={isSoldOut}>
+        <Button asChild className="w-full" disabled={isSoldOut} onClick={handleCardClick}>
           <Link href={`/raffles/${raffle.id}`}>
             {isSoldOut ? <BadgeCheck className="mr-2 h-4 w-4" /> : <Ticket className="mr-2 h-4 w-4" />}
             {isSoldOut ? '¡RIFA CERRADA!' : 'Comprar Boletos'}
