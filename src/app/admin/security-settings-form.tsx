@@ -132,87 +132,87 @@ export function SecuritySettingsForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
-        <div>
-            <h3 className="text-lg font-medium">Registro de Usuarios</h3>
-            <div className="flex items-center justify-between rounded-lg border p-4 mt-4">
-                <div className="space-y-0.5">
-                    <FormLabel className="text-base">Verificación de Identidad con IA</FormLabel>
-                    <FormDescription>
-                        Si está activo, los nuevos usuarios deberán verificar su identidad usando su licencia de conducir.
-                    </FormDescription>
-                </div>
-                 <Switch
-                    checked={isVerificationEnabled}
-                    onCheckedChange={handleVerificationToggle}
-                    aria-label="Toggle de verificación de identidad"
-                 />
-            </div>
-        </div>
+        <Form {...form}>
+          <div>
+              <h3 className="text-lg font-medium">Registro de Usuarios</h3>
+              <div className="flex items-center justify-between rounded-lg border p-4 mt-4">
+                  <div className="space-y-0.5">
+                      <FormLabel className="text-base">Verificación de Identidad con IA</FormLabel>
+                      <FormDescription>
+                          Si está activo, los nuevos usuarios deberán verificar su identidad usando su licencia de conducir.
+                      </FormDescription>
+                  </div>
+                  <Switch
+                      checked={isVerificationEnabled}
+                      onCheckedChange={handleVerificationToggle}
+                      aria-label="Toggle de verificación de identidad"
+                  />
+              </div>
+          </div>
 
-        <Separator />
+          <Separator />
 
-        <div>
-         <h3 className="text-lg font-medium mb-4">Credenciales de Administrador</h3>
-         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="newUsername"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre de Usuario</FormLabel>
-                  <FormControl>
-                    <Input type="text" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="currentPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contraseña Actual (requerida para cualquier cambio)</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="newPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nueva Contraseña (opcional)</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar Nueva Contraseña</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" size="lg" className="w-full">
-              Actualizar Credenciales
-            </Button>
-          </form>
+          <div>
+          <h3 className="text-lg font-medium mb-4">Credenciales de Administrador</h3>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="newUsername"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre de Usuario</FormLabel>
+                    <FormControl>
+                      <Input type="text" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="currentPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contraseña Actual (requerida para cualquier cambio)</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nueva Contraseña (opcional)</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirmar Nueva Contraseña</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" size="lg" className="w-full">
+                Actualizar Credenciales
+              </Button>
+            </form>
+          </div>
         </Form>
-        </div>
       </CardContent>
     </Card>
   );
