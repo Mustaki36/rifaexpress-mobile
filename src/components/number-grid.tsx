@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -20,9 +21,19 @@ export function NumberGrid({
   pricePerTicket,
 }: NumberGridProps) {
   const numbers = Array.from({ length: totalTickets }, (_, i) => i + 1);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  const handleSelect = (number: number) => {
+    onSelectNumber(number);
+    // Play sound only when selecting, not deselecting
+    if (!selectedNumbers.includes(number)) {
+      audioRef.current?.play();
+    }
+  }
 
   return (
     <TooltipProvider delayDuration={100}>
+        <audio ref={audioRef} src="https://www.soundjay.com/buttons/sounds/button-1.mp3" preload="auto"></audio>
       <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-80 overflow-y-auto p-2 bg-muted/50 rounded-md">
         {numbers.map((number) => {
           const isSold = soldTickets.includes(number);
@@ -45,7 +56,7 @@ export function NumberGrid({
                     isReserved && "cursor-not-allowed opacity-50 bg-amber-200 text-amber-800",
                     !isDisabled && !isSelected && "hover:bg-accent/50"
                   )}
-                  onClick={() => onSelectNumber(number)}
+                  onClick={() => handleSelect(number)}
                   disabled={isDisabled}
                   aria-label={`Boleto número ${number}`}
                 >
