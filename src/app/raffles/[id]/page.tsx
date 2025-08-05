@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -16,6 +17,7 @@ import { AuthRequiredDialog } from "@/components/auth-required-dialog";
 import { getLotteryInfo, GetLotteryInfoOutput } from "@/ai/flows/get-lottery-info";
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Template from "@/components/template";
 
 export default function RafflePage() {
   const params = useParams();
@@ -153,7 +155,7 @@ export default function RafflePage() {
   const totalPrice = selectedNumbers.length * raffle.ticketPrice;
 
   return (
-    <>
+    <Template>
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
           <div>
@@ -273,6 +275,6 @@ export default function RafflePage() {
         </div>
       </div>
       <AuthRequiredDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} />
-    </>
+    </Template>
   );
 }
