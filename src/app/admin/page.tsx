@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateRaffleForm } from "./create-raffle-form";
 import { RafflesList } from "./raffles-list";
-import { Ticket, ListOrdered } from "lucide-react";
+import { Ticket, ListOrdered, Shield } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
+import { ChangePasswordForm } from "./change-password-form";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,7 +27,7 @@ export default function AdminPage() {
       </section>
 
       <Tabs defaultValue="create" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
           <TabsTrigger value="create">
             <Ticket className="mr-2" />
             Crear Rifa
@@ -35,12 +36,19 @@ export default function AdminPage() {
             <ListOrdered className="mr-2" />
             Gestionar Rifas
           </TabsTrigger>
+          <TabsTrigger value="security">
+            <Shield className="mr-2" />
+            Seguridad
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="create">
             <CreateRaffleForm />
         </TabsContent>
         <TabsContent value="manage">
             <RafflesList />
+        </TabsContent>
+         <TabsContent value="security">
+            <ChangePasswordForm />
         </TabsContent>
       </Tabs>
     </div>
