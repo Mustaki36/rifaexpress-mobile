@@ -22,6 +22,12 @@ export function MainNav() {
       >
         Mi Perfil
       </Link>
+      <Link
+        href="/admin"
+        className="transition-colors hover:text-primary text-muted-foreground"
+      >
+        Admin
+      </Link>
     </nav>
   );
 }
