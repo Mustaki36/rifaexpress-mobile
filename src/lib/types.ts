@@ -62,3 +62,10 @@ export type BlockedUser = {
   reason: string;
   notes: string;
 };
+
+export type ReservedTicket = {
+  raffleId: string;
+  number: number;
+  userId: string;
+  expiresAt: Date;
+};

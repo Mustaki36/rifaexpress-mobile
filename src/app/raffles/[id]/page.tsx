@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,29 @@ import { AuthRequiredDialog } from "@/components/auth-required-dialog";
 
 export default function RafflePage() {
   const params = useParams();
-  const { raffles } = useRaffles();
-  const { isAuthenticated } = useAuth();
-  const raffle = raffles.find((r) => r.id === params.id);
+  const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser } = useRaffles();
+  const { user, isAuthenticated } = useAuth();
+  const raffleId = params.id as string;
+  const raffle = raffles.find((r) => r.id === raffleId);
   
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const otherUsersReservedTickets = useMemo(() => {
+    return reservedTickets
+      .filter(t => t.raffleId === raffleId && t.userId !== user?.id)
+      .map(t => t.number);
+  }, [reservedTickets, raffleId, user?.id]);
+
+  // When the component unmounts (user navigates away), release their reservations
+  useEffect(() => {
+    return () => {
+      if (user?.id && raffleId) {
+        releaseTicketsForUser(user.id, raffleId);
+      }
+    };
+  }, [user?.id, raffleId, releaseTicketsForUser]);
 
   if (!raffle) {
     return (
@@ -34,11 +50,28 @@ export default function RafflePage() {
   }
 
   const handleNumberSelect = (number: number) => {
-    setSelectedNumbers((prev) =>
-      prev.includes(number)
-        ? prev.filter((n) => n !== number)
-        : [...prev, number]
-    );
+    if (!isAuthenticated || !user) {
+      setIsAuthDialogOpen(true);
+      return;
+    }
+    
+    if (selectedNumbers.includes(number)) {
+      // User is de-selecting a number
+      releaseTicket(raffle.id, number, user.id);
+      setSelectedNumbers((prev) => prev.filter((n) => n !== number));
+    } else {
+      // User is selecting a number, try to reserve it
+      const success = reserveTicket(raffle.id, number, user.id);
+      if (success) {
+        setSelectedNumbers((prev) => [...prev, number]);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Boleto no disponible",
+          description: "Este boleto acaba de ser vendido o reservado por otra persona.",
+        });
+      }
+    }
   };
   
   const handlePurchase = () => {
@@ -51,16 +84,17 @@ export default function RafflePage() {
       return;
     }
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       setIsAuthDialogOpen(true);
       return;
     }
     
+    purchaseTickets(raffle.id, selectedNumbers, user.id);
+
     toast({
         title: "¡Compra exitosa!",
         description: `Has comprado ${selectedNumbers.length} boleto(s). ¡Mucha suerte!`,
     });
-    // In a real app, you would handle payment and update sold tickets here.
     setSelectedNumbers([]);
   }
 
@@ -106,6 +140,7 @@ export default function RafflePage() {
                 <NumberGrid
                   totalTickets={raffle.totalTickets}
                   soldTickets={raffle.soldTickets}
+                  reservedTickets={otherUsersReservedTickets}
                   selectedNumbers={selectedNumbers}
                   onSelectNumber={handleNumberSelect}
                   pricePerTicket={raffle.ticketPrice}
