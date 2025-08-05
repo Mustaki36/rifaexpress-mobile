@@ -22,11 +22,22 @@ export function MainNav() {
     return null;
   }
 
+  const handleRifasClick = () => {
+    const soundUrl = "https://files.catbox.moe/aaulmt.mp3";
+    try {
+        const audio = new Audio(soundUrl);
+        audio.play();
+    } catch (e) {
+        console.error("Error playing sound:", e);
+    }
+  };
+
   return (
     <nav className="hidden md:flex items-center space-x-6 text-sm font-medium mx-6">
       <Link
         href="/"
         className="transition-colors hover:text-primary"
+        onClick={handleRifasClick}
       >
         Rifas
       </Link>
