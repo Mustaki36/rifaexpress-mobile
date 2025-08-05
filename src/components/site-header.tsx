@@ -64,9 +64,6 @@ export function SiteHeader() {
                           <PlusCircle className="mr-2 h-4 w-4" />
                           Crear Rifa
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push('/admin')}>
-                        Admin
-                      </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuSeparator />
