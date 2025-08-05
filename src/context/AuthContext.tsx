@@ -105,19 +105,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return MOCK_ADMIN_USER;
     }
     
-    // Check local users first for users created by admin
-    const localUser = allUsers.find(u => u.email === email);
-    if (localUser && localUser.password === pass) {
-        // This is a user created by admin, not in Firebase Auth yet.
-        // We can treat them as logged in within our app's state.
-        const userProfile = { ...localUser };
-        setCurrentUser(userProfile);
-        // Simulate a firebaseUser object for consistency if needed, but keep it simple
-        setFirebaseUser({ uid: localUser.id, email: localUser.email } as FirebaseUser);
-        return userProfile;
-    }
-
-    // If not a local-only user, try Firebase Auth
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
         const userDocRef = doc(db, "users", userCredential.user.uid);
@@ -125,16 +112,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
-            const userProfile = { id: userCredential.user.uid, ...userData } as UserProfile;
+            const userProfile = { 
+                id: userCredential.user.uid, 
+                ...userData,
+                createdAt: userData.createdAt.toDate()
+            } as UserProfile;
             setCurrentUser(userProfile);
             return userProfile;
+        } else {
+             throw new Error("User profile not found in Firestore.");
         }
     } catch (error) {
-        console.error("Firebase Auth login failed, which might be expected for admin-created users.", error);
+        // Fallback for admin-created users not in Firebase Auth
+        const localUser = allUsers.find(u => u.email === email && u.password === pass);
+        if (localUser) {
+            setCurrentUser(localUser);
+            // Simulate a firebaseUser object for consistency. It won't have all methods.
+            setFirebaseUser({ uid: localUser.id, email: localUser.email } as FirebaseUser);
+            return localUser;
+        }
+        console.error("Firebase Auth login failed:", error);
         throw new Error("auth/invalid-credential");
     }
-
-    return null;
   };
 
   const logout = async () => {
@@ -167,12 +166,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        mustChangePassword: false,
     };
 
-    await setDoc(doc(db, "users", user.uid), {
+    const userDocRef = doc(db, "users", user.uid);
+    await setDoc(userDocRef, {
         ...newUserProfile,
         createdAt: serverTimestamp(),
     });
     
-    await fetchAllUsers();
+    const newUserDoc = await getDoc(userDocRef);
+    const newUserData = newUserDoc.data();
+    const createdUser = {
+        id: newUserDoc.id,
+        ...newUserData,
+        createdAt: newUserData?.createdAt.toDate(),
+    } as UserProfile;
+
+    setAllUsers(prev => [...prev, createdUser]);
+    setCurrentUser(createdUser);
   };
 
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
@@ -186,8 +195,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Este email ya está registrado.");
     }
     
-    console.warn(`Creando usuario en Firestore. El inicio de sesión real requiere que el usuario se registre o que un administrador use una función de backend para crear una cuenta de autenticación.`);
-
     try {
         const newUserProfileData = {
           ...userData,
@@ -195,7 +202,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
           mustChangePassword: true,
-          createdAt: new Date(), // Use local date for immediate feedback
         };
 
         const docRef = await addDoc(collection(db, "users"), {
@@ -204,7 +210,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
         // Update local state for instant UI update
-        setAllUsers(prevUsers => [...prevUsers, { id: docRef.id, ...newUserProfileData }]);
+        const finalUser = { 
+            id: docRef.id, 
+            ...newUserProfileData,
+            createdAt: new Date() // Use local date for immediate feedback
+        };
+
+        setAllUsers(prevUsers => [...prevUsers, finalUser as UserProfile]);
     } catch (error) {
         console.error("Error al crear usuario en Firestore:", error);
         throw new Error('No se pudo crear el usuario en Firestore.');
@@ -227,7 +239,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const deleteUser = async (userId: string) => {
-    console.warn(`Eliminando usuario ${userId} solo de Firestore. La cuenta de Firebase Auth (si existe) no se eliminará.`);
     await deleteDoc(doc(db, "users", userId));
     setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
   }
