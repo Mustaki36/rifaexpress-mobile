@@ -112,8 +112,10 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
       <CardFooter className="flex-col items-start gap-4 p-6 pt-0">
         <div className="flex items-center text-sm text-muted-foreground">
           <Clock className="mr-2 h-4 w-4" />
-          {isSoldOut ? (
+          {isSoldOut && totalSecondsLeft > 0 ? (
              <span>Sorteo en: <span className="font-bold text-primary">{countdownText}</span></span>
+          ) : isSoldOut ? (
+             <span>Sorteo finalizado</span>
           ) : (
              <span>Sorteo: {raffle.drawDate.toLocaleDateString('es-ES', {day: 'numeric', month: 'long'})}</span>
           )}
