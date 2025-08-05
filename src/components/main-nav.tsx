@@ -6,6 +6,9 @@ import { PlusCircle, Shield } from "lucide-react";
 
 export function MainNav() {
   const { user } = useAuth();
+  
+  const isAdmin = user?.role === 'admin';
+
   return (
     <nav className="hidden md:flex items-center space-x-6 text-sm font-medium mx-6">
       <Link
@@ -22,7 +25,7 @@ export function MainNav() {
         Resultados
       </Link>
       
-      {user?.role === 'admin' && (
+      {isAdmin && (
         <Link
           href="/admin"
           className="transition-colors hover:text-primary font-semibold text-primary flex items-center gap-1"
@@ -43,7 +46,7 @@ export function MainNav() {
          </>
       )}
       
-      {user?.role !== 'admin' && (
+      {user && (
         <Link
             href="/profile"
             className="transition-colors hover:text-primary text-muted-foreground"
