@@ -197,7 +197,10 @@ export default function SignupPage() {
     setIsSendingCode(true);
     try {
       await requestVerificationCode(email);
-      toast({ title: "Código enviado", description: `Se ha enviado un código de verificación a ${email}.` });
+      toast({ 
+        title: "Código de prueba generado", 
+        description: "Busca el código en la consola del navegador (F12)."
+      });
       setCodeSent(true);
       setCountdown(60);
     } catch (error) {
