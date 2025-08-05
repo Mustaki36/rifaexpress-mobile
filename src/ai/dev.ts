@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/ensure-fairness.ts';
 import '@/ai/flows/generate-description.ts';
+import '@/ai/flows/verify-identity-flow.ts';

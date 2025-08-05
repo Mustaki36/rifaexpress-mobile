@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Ticket } from "lucide-react";
+import { User, Ticket, Phone, MapPin, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -30,7 +30,10 @@ export default function ProfilePage() {
           <AvatarImage src={user.avatar} alt={user.name} />
           <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
         </Avatar>
-        <h1 className="text-4xl font-bold font-headline text-primary">{user.name}</h1>
+        <div className="flex items-center gap-2">
+            <h1 className="text-4xl font-bold font-headline text-primary">{user.name}</h1>
+            {user.isVerified && <ShieldCheck className="h-8 w-8 text-green-500" />}
+        </div>
         <p className="text-muted-foreground">{user.email}</p>
       </section>
 
@@ -42,12 +45,20 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div>
-                        <h3 className="font-semibold">Nombre</h3>
-                        <p className="text-muted-foreground">{user.name}</p>
+                        <h3 className="font-semibold flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground"/>Nombre</h3>
+                        <p className="text-muted-foreground pl-6">{user.name}</p>
                     </div>
                      <div>
-                        <h3 className="font-semibold">Email</h3>
-                        <p className="text-muted-foreground">{user.email}</p>
+                        <h3 className="font-semibold flex items-center gap-2"><Ticket className="w-4 h-4 text-muted-foreground"/>Email</h3>
+                        <p className="text-muted-foreground pl-6">{user.email}</p>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground"/>Teléfono</h3>
+                        <p className="text-muted-foreground pl-6">{user.phone || 'No proporcionado'}</p>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-muted-foreground"/>Dirección</h3>
+                        <p className="text-muted-foreground pl-6">{user.address || 'No proporcionada'}</p>
                     </div>
                 </CardContent>
             </Card>

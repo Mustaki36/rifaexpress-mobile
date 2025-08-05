@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { UserProfile } from '@/lib/types';
 import { MOCK_USER } from '@/lib/data';
+import crypto from 'crypto';
 
 // This is a mock user database. In a real application, this would be a database.
 const users: UserProfile[] = [MOCK_USER];
@@ -12,7 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, pass: string) => boolean;
   logout: () => void;
-  signup: (name: string, email: string, pass: string) => void;
+  signup: (name: string, email: string, pass: string, phone: string, address: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,15 +41,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUser(null);
   };
 
-  const signup = (name: string, email: string, pass: string) => {
+  const signup = (name: string, email: string, pass: string, phone: string, address: string) => {
     if (users.some(u => u.email === email)) {
       throw new Error("El email ya está registrado.");
     }
 
     const newUser: UserProfile = {
-      id: `user-${Date.now()}`,
+      id: `user-${crypto.randomBytes(8).toString('hex')}`,
       name,
       email,
+      phone,
+      address,
+      isVerified: true, // Set to true after successful AI verification
       avatar: `https://placehold.co/100x100?text=${name.charAt(0)}`,
       tickets: [],
       // In a real app, you would hash the password
