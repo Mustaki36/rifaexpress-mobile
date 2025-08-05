@@ -30,8 +30,8 @@ export async function getLotteryInfo(input: GetLotteryInfoInput): Promise<GetLot
 
 const getLotteryName = (totalTickets: number): string => {
     if (totalTickets <= 100) return "Pega 2";
-    if (totalTickets <= 1000) return "Pega 3";
-    if (totalTickets <= 10000) return "Pega 4";
+    if (totalTickets > 100 && totalTickets <= 1000) return "Pega 3";
+    if (totalTickets > 1000 && totalTickets <= 10000) return "Pega 4";
     return "Lotería Tradicional";
 };
 
