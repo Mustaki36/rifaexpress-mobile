@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Ticket, Phone, MapPin, ShieldCheck, ListOrdered } from "lucide-react";
+import { User, Ticket, Phone, MapPin, ShieldCheck, ListOrdered, Home } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -28,6 +28,10 @@ export default function ProfilePage() {
   }
 
   const userCreatedRaffles = raffles.filter(r => r.creatorId === user.id);
+
+  const fullAddress = user.address 
+    ? `${user.address.street}, ${user.address.city}, ${user.address.state}, ${user.address.postalCode}, ${user.address.country}`
+    : 'No proporcionada';
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -76,8 +80,8 @@ export default function ProfilePage() {
                         <p className="text-muted-foreground pl-6">{user.phone || 'No proporcionado'}</p>
                     </div>
                      <div>
-                        <h3 className="font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-muted-foreground"/>Dirección</h3>
-                        <p className="text-muted-foreground pl-6">{user.address || 'No proporcionada'}</p>
+                        <h3 className="font-semibold flex items-center gap-2"><Home className="w-4 h-4 text-muted-foreground"/>Dirección</h3>
+                        <p className="text-muted-foreground pl-6">{fullAddress}</p>
                     </div>
                 </CardContent>
             </Card>

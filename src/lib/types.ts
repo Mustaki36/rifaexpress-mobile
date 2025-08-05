@@ -23,12 +23,20 @@ export type RaffleResult = {
   fairnessProof: string;
 };
 
+export type Address = {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+};
+
 export type UserProfile = {
   id: string;
   name: string;
   email: string;
   phone?: string;
-  address?: string;
+  address?: Address;
   isVerified: boolean;
   avatar: string;
   role: 'regular' | 'creator';

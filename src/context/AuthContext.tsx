@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { UserProfile, VerificationInfo } from '@/lib/types';
+import type { UserProfile, VerificationInfo, Address } from '@/lib/types';
 import { MOCK_USER } from '@/lib/data';
 import crypto from 'crypto';
 import { useBlock } from './BlockContext';
@@ -18,7 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, pass: string) => boolean;
   logout: () => void;
-  signup: (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean, role: 'regular' | 'creator') => void;
+  signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => void;
   requestVerificationCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => boolean;
   isEmailBlocked: (email: string) => boolean;
@@ -103,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUser(null);
   };
 
-  const signup = (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean, role: 'regular' | 'creator') => {
+  const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
     if (isEmailBlocked(email)) {
         throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
@@ -146,5 +146,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

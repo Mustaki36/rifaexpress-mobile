@@ -86,6 +86,14 @@ export const MOCK_USER: UserProfile = {
   id: 'user-123',
   name: 'Juan Pérez',
   email: 'juan.perez@example.com',
+  isVerified: false,
+  address: {
+    street: "Av. Siempre Viva 742",
+    city: "Springfield",
+    state: "No especificado",
+    postalCode: "12345",
+    country: "EE. UU."
+  },
   avatar: 'https://placehold.co/100x100.png',
   role: 'creator',
   tickets: [

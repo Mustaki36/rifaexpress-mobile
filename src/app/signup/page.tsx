@@ -25,6 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSettings } from "@/context/SettingsContext";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -32,7 +33,11 @@ const formSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
   confirmPassword: z.string().min(6, "La confirmación de contraseña debe tener al menos 6 caracteres."),
   phone: z.string().min(8, "El número de teléfono no es válido."),
-  address: z.string().min(10, "La dirección debe tener al menos 10 caracteres."),
+  street: z.string().min(5, "La calle debe tener al menos 5 caracteres."),
+  city: z.string().min(3, "La ciudad debe tener al menos 3 caracteres."),
+  state: z.string().min(2, "El estado/provincia debe tener al menos 2 caracteres."),
+  postalCode: z.string().min(4, "El código postal no es válido."),
+  country: z.string().min(3, "El país debe tener al menos 3 caracteres."),
   verificationCode: z.string().optional(),
   role: z.enum(["regular", "creator"], {
     required_error: "Debes seleccionar un tipo de cuenta.",
@@ -87,7 +92,11 @@ export default function SignupPage() {
       password: "",
       confirmPassword: "",
       phone: "",
-      address: "",
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "",
       verificationCode: "",
       isOfAge: false,
     },
@@ -271,7 +280,9 @@ export default function SignupPage() {
     }
     
     try {
-      signup(values.name, values.email, values.password, values.phone, values.address, isVerificationEnabled, values.role);
+      const { street, city, state, postalCode, country, ...restOfValues } = values;
+      const address = { street, city, state, postalCode, country };
+      signup(restOfValues.name, restOfValues.email, restOfValues.password, restOfValues.phone, address, isVerificationEnabled, restOfValues.role);
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. ¡Bienvenido!",
@@ -506,18 +517,76 @@ export default function SignupPage() {
                 />
                  <FormField
                     control={form.control}
-                    name="address"
+                    name="country"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Dirección</FormLabel>
+                        <FormLabel>País</FormLabel>
                         <FormControl>
-                          <Input placeholder="Calle Falsa 123, Springfield" {...field} />
+                          <Input placeholder="Ej: México" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                </div>
+
+                <Separator className="my-4" />
+                <FormLabel className="text-base font-semibold">Dirección de Envío</FormLabel>
+
+                <FormField
+                    control={form.control}
+                    name="street"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Calle y Número</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Av. Siempre Viva 742" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Ciudad</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Springfield" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Estado / Provincia</FormLabel>
+                            <FormControl>
+                                <Input placeholder="No especificado" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="postalCode"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Código Postal</FormLabel>
+                            <FormControl>
+                                <Input placeholder="12345" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
                 
 
                 {isVerificationEnabled && (
