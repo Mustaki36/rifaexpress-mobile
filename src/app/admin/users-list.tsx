@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -47,7 +47,7 @@ import { useBlock } from "@/context/BlockContext";
 import type { UserProfile } from "@/lib/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Eye, ShieldCheck, User, Home, Ticket, ListOrdered, Calendar, MoreHorizontal, UserPlus, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import { Eye, ShieldCheck, User, Home, Ticket, ListOrdered, Calendar, MoreHorizontal, UserPlus, Pencil, Trash2, ShieldAlert, Search } from "lucide-react";
 import { useRaffles } from "@/context/RaffleContext";
 import { AddUserDialog } from "./add-user-dialog";
 import { EditUserSheet } from "./edit-user-sheet";
@@ -65,8 +65,17 @@ export function UsersList() {
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [userToBlock, setUserToBlock] = useState<UserProfile | null>(null);
   const [blockReason, setBlockReason] = useState("");
-
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>(allUsers);
+
+  useEffect(() => {
+    const results = allUsers.filter(user =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(results);
+  }, [searchTerm, allUsers]);
 
 
   const handleViewUser = (userId: string) => {
@@ -113,17 +122,30 @@ export function UsersList() {
   return (
     <>
       <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle>Usuarios Registrados</CardTitle>
-            <CardDescription>
-              Visualiza y gestiona todos los usuarios del sistema.
-            </CardDescription>
-          </div>
-          <Button onClick={() => setIsAddUserOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Añadir Usuario
-          </Button>
+        <CardHeader>
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <CardTitle>Usuarios Registrados</CardTitle>
+                    <CardDescription>
+                    Visualiza y gestiona todos los usuarios del sistema.
+                    </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-grow sm:flex-grow-0">
+                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Buscar por nombre o email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-64 pl-10"
+                        />
+                    </div>
+                    <Button onClick={() => setIsAddUserOpen(true)}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Añadir
+                    </Button>
+                </div>
+            </div>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg">
@@ -137,8 +159,8 @@ export function UsersList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allUsers.length > 0 ? (
-                  allUsers.map((user) => (
+                {filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -197,7 +219,7 @@ export function UsersList() {
                       colSpan={4}
                       className="text-center h-24 text-muted-foreground"
                     >
-                      No hay usuarios registrados.
+                      No se encontraron usuarios.
                     </TableCell>
                   </TableRow>
                 )}
