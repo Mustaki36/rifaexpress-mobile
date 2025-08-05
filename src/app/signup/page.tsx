@@ -216,7 +216,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">Crear una cuenta</CardTitle>
           <CardDescription>
-            Únete a RifaExpress y empieza a ganar premios increíbles.
+            Únete a RifasXpress y empieza a ganar premios increíbles.
           </CardDescription>
         </CardHeader>
         <CardContent>

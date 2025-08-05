@@ -9,7 +9,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ResultsProvider } from '@/context/ResultsContext';
 
 export const metadata: Metadata = {
-  title: 'RifaExpress Mobile',
+  title: 'RifasXpress Mobile',
   description: 'Tu plataforma de rifas online.',
 };
 
