@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -58,7 +59,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         if (soundTimeoutRef.current) {
             clearTimeout(soundTimeoutRef.current);
         }
-        soundTimeoutRef.current = setTimeout(playHoverSound, 125);
+        soundTimeoutRef.current = setTimeout(playHoverSound, 62);
     };
 
     const handleMouseLeave = () => {
