@@ -111,6 +111,12 @@ export default function LoginPage() {
               Regístrate
             </Link>
           </div>
+          <div className="text-center text-xs text-muted-foreground">
+            ¿Eres administrador?{" "}
+            <Link href="/admin" className="underline text-primary font-semibold">
+              Ingresa aquí
+            </Link>
+          </div>
         </CardFooter>
       </Card>
     </div>
