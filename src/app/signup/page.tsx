@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock, Users, User, BadgeCheck } from "lucide-react";
+import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock, Users, User, BadgeCheck, Eye, EyeOff } from "lucide-react";
 import React, { useRef, useState, useEffect } from 'react';
 import { verifyIdentity, VerifyIdentityInput } from "@/ai/flows/verify-identity-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,6 +30,7 @@ const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
   email: z.string().email("Por favor, introduce un email válido."),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
+  confirmPassword: z.string().min(6, "La confirmación de contraseña debe tener al menos 6 caracteres."),
   phone: z.string().min(8, "El número de teléfono no es válido."),
   address: z.string().min(10, "La dirección debe tener al menos 10 caracteres."),
   verificationCode: z.string().optional(),
@@ -39,6 +40,9 @@ const formSchema = z.object({
   isOfAge: z.boolean().refine(val => val === true, {
     message: "Debes confirmar que eres mayor de edad.",
   }),
+}).refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden.",
+    path: ["confirmPassword"],
 });
 
 type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
@@ -61,6 +65,7 @@ export default function SignupPage() {
   
   const [isCodeVerified, setIsCodeVerified] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -80,6 +85,7 @@ export default function SignupPage() {
       name: "",
       email: "",
       password: "",
+      confirmPassword: "",
       phone: "",
       address: "",
       verificationCode: "",
@@ -377,22 +383,6 @@ export default function SignupPage() {
                   )}
                 />
                  <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contraseña</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                  <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
@@ -405,6 +395,67 @@ export default function SignupPage() {
                       </FormItem>
                     )}
                   />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contraseña</FormLabel>
+                        <div className="relative">
+                          <FormControl>
+                            <Input 
+                              type={showPassword ? "text" : "password"} 
+                              {...field} 
+                            />
+                          </FormControl>
+                           <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                              onClick={() => setShowPassword(prev => !prev)}
+                            >
+                              {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirmar Contraseña</FormLabel>
+                         <div className="relative">
+                            <FormControl>
+                              <Input 
+                                type={showPassword ? "text" : "password"} 
+                                {...field} 
+                              />
+                            </FormControl>
+                             <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                              onClick={() => setShowPassword(prev => !prev)}
+                            >
+                              {showPassword ? <EyeOff /> : <Eye />}
+                            </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                  
                    <div className="space-y-2">
                      <FormLabel>Verificación de Email</FormLabel>
                      <Button type="button" onClick={handleRequestCode} disabled={countdown > 0 || isSendingCode || !emailValue || !!form.getFieldState("email").error} className="w-full">
@@ -412,10 +463,8 @@ export default function SignupPage() {
                         {codeSent && countdown > 0 ? `Reenviar en ${countdown}s` : "Enviar código"}
                      </Button>
                    </div>
-                </div>
-
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                    <FormField
+                   <div>
+                     <FormField
                       control={form.control}
                       name="verificationCode"
                       render={({ field }) => (
@@ -428,6 +477,11 @@ export default function SignupPage() {
                         </FormItem>
                       )}
                     />
+                   </div>
+                </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    
                     <div className="space-y-2">
                        <FormLabel className="opacity-0 hidden md:block">Confirmar</FormLabel>
                        <Button type="button" onClick={handleVerifyCode} disabled={!codeSent || isVerifyingCode || isCodeVerified} className="w-full">
