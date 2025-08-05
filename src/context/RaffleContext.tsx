@@ -21,7 +21,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
       id: `raffle-${Date.now()}-${Math.random()}`,
       soldTickets: [],
     };
-    setRaffles(prev => [...prev, newRaffle]);
+    setRaffles(prev => [newRaffle, ...prev]);
   };
 
   const deleteRaffle = (raffleId: string) => {

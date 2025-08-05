@@ -12,6 +12,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 110 }, (_, i) => i + 15),
     drawDate: new Date('2024-09-30T18:00:00'),
     aiHint: 'new car',
+    creatorId: 'admin',
   },
   {
     id: 'phone-15-pro',
@@ -24,6 +25,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 50 }, (_, i) => i + 1),
     drawDate: new Date('2024-08-15T20:00:00'),
     aiHint: 'latest smartphone',
+    creatorId: 'admin',
   },
   {
     id: 'console-next-gen',
@@ -36,6 +38,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 95 }, (_, i) => i + 1),
     drawDate: new Date('2024-08-25T20:00:00'),
     aiHint: 'gaming console',
+    creatorId: 'user-123', // Created by our mock user
   },
   {
     id: 'vacation-caribe',
@@ -48,6 +51,7 @@ export const MOCK_RAFFLES: Raffle[] = [
     soldTickets: Array.from({ length: 150 }, (_, i) => i + 50),
     drawDate: new Date('2024-10-10T20:00:00'),
     aiHint: 'tropical beach',
+    creatorId: 'admin',
   },
 ];
 
@@ -83,6 +87,7 @@ export const MOCK_USER: UserProfile = {
   name: 'Juan Pérez',
   email: 'juan.perez@example.com',
   avatar: 'https://placehold.co/100x100.png',
+  role: 'creator',
   tickets: [
     {
       raffleId: 'car-2024',

@@ -11,6 +11,7 @@ export type Raffle = {
   soldTickets: number[];
   drawDate: Date;
   aiHint: string;
+  creatorId: string; // 'admin' or user ID
 };
 
 export type RaffleResult = {
@@ -30,6 +31,7 @@ export type UserProfile = {
   address?: string;
   isVerified: boolean;
   avatar: string;
+  role: 'regular' | 'creator';
   tickets: {
     raffleId: string;
     raffleTitle: string;

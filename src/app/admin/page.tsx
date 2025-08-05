@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreateRaffleForm } from "./create-raffle-form";
 import { RafflesList } from "./raffles-list";
-import { Ticket, ListOrdered, Shield, LogOut, History, ShieldX } from "lucide-react";
+import { ListOrdered, Shield, LogOut, History, ShieldX } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
 import { SecuritySettingsForm } from "./security-settings-form";
 import { Button } from "@/components/ui/button";
@@ -40,19 +39,15 @@ export default function AdminPage() {
           Panel de Administración
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Gestiona tus rifas, crea nuevas y elige a los ganadores.
+          Gestiona todas las rifas, usuarios y configuraciones del sistema.
         </p>
       </section>
 
-      <Tabs defaultValue="create" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-3xl mx-auto">
-          <TabsTrigger value="create">
-            <Ticket className="mr-2" />
-            Crear Rifa
-          </TabsTrigger>
+      <Tabs defaultValue="manage" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl mx-auto">
           <TabsTrigger value="manage">
             <ListOrdered className="mr-2" />
-            Gestionar
+            Gestionar Rifas
           </TabsTrigger>
           <TabsTrigger value="history">
             <History className="mr-2" />
@@ -67,9 +62,6 @@ export default function AdminPage() {
             Bloqueos
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="create">
-            <CreateRaffleForm />
-        </TabsContent>
         <TabsContent value="manage">
             <RafflesList />
         </TabsContent>

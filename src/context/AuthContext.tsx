@@ -18,7 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, pass: string) => boolean;
   logout: () => void;
-  signup: (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean) => void;
+  signup: (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean, role: 'regular' | 'creator') => void;
   requestVerificationCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => boolean;
   isEmailBlocked: (email: string) => boolean;
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setCurrentUser(null);
   };
 
-  const signup = (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean) => {
+  const signup = (name: string, email: string, pass: string, phone: string, address: string, isVerified: boolean, role: 'regular' | 'creator') => {
     if (isEmailBlocked(email)) {
         throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
@@ -117,6 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       phone,
       address,
       isVerified,
+      role,
       avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
       tickets: [],
       // In a real app, you would hash the password

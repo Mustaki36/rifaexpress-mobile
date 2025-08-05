@@ -18,12 +18,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock } from "lucide-react";
+import { Camera, AlertTriangle, CheckCircle2, UserCheck, Loader2, Send, Clock, Users, User } from "lucide-react";
 import React, { useRef, useState, useEffect } from 'react';
 import { verifyIdentity, VerifyIdentityInput } from "@/ai/flows/verify-identity-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSettings } from "@/context/SettingsContext";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -32,6 +33,9 @@ const formSchema = z.object({
   phone: z.string().min(8, "El número de teléfono no es válido."),
   address: z.string().min(10, "La dirección debe tener al menos 10 caracteres."),
   verificationCode: z.string().optional(),
+  role: z.enum(["regular", "creator"], {
+    required_error: "Debes seleccionar un tipo de cuenta.",
+  }),
   isOfAge: z.boolean().refine(val => val === true, {
     message: "Debes confirmar que eres mayor de edad.",
   }),
@@ -228,7 +232,7 @@ export default function SignupPage() {
          return;
       }
 
-      signup(values.name, values.email, values.password, values.phone, values.address, isVerificationEnabled);
+      signup(values.name, values.email, values.password, values.phone, values.address, isVerificationEnabled, values.role);
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. ¡Bienvenido!",
@@ -286,6 +290,45 @@ export default function SignupPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>¿Qué tipo de cuenta quieres?</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                      >
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="regular" id="r1" className="peer sr-only" />
+                          </FormControl>
+                          <FormLabel htmlFor="r1" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary w-full cursor-pointer">
+                              <User className="mb-3 h-6 w-6" />
+                              Usuario Regular
+                              <span className="text-xs font-normal text-muted-foreground mt-1 text-center">Para comprar boletos y participar.</span>
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <RadioGroupItem value="creator" id="r2" className="peer sr-only" />
+                          </FormControl>
+                           <FormLabel htmlFor="r2" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary w-full cursor-pointer">
+                              <Users className="mb-3 h-6 w-6" />
+                              Creador de Rifas
+                              <span className="text-xs font-normal text-muted-foreground mt-1 text-center">Para crear y gestionar tus propias rifas.</span>
+                          </FormLabel>
+                        </FormItem>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
