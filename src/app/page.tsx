@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { RaffleCard } from "@/components/raffle-card";
 import { Filter, Search } from "lucide-react";
 import { useRaffles } from "@/context/RaffleContext";
+import { useAuth } from "@/context/AuthContext";
 import type { Raffle } from "@/lib/types";
 import {
   DropdownMenu,
@@ -20,14 +22,22 @@ type SortOption = "recent" | "oldest" | "price_asc" | "price_desc";
 
 export default function Home() {
   const { raffles } = useRaffles();
+  const { allUsers } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("recent");
 
   const filteredAndSortedRaffles = useMemo(() => {
-    let filtered = raffles.filter(raffle =>
-      raffle.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      raffle.prize.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    let filtered = raffles.filter(raffle => {
+      const creator = allUsers.find(u => u.id === raffle.creatorId);
+      const creatorName = creator ? creator.name.toLowerCase() : '';
+      const searchLower = searchTerm.toLowerCase();
+      
+      return (
+        raffle.title.toLowerCase().includes(searchLower) ||
+        raffle.prize.toLowerCase().includes(searchLower) ||
+        creatorName.includes(searchLower)
+      );
+    });
 
     switch (sortOption) {
       case "recent":
@@ -45,7 +55,7 @@ export default function Home() {
     }
 
     return filtered;
-  }, [searchTerm, raffles, sortOption]);
+  }, [searchTerm, raffles, sortOption, allUsers]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -65,7 +75,7 @@ export default function Home() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
-            placeholder="Buscar rifa por nombre o premio..." 
+            placeholder="Buscar por rifa, premio o creador..." 
             className="pl-10" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
