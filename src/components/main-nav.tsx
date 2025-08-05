@@ -1,13 +1,26 @@
+
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "./ui/button";
 import { PlusCircle, Shield } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function MainNav() {
   const { user } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
   
   const isAdmin = user?.role === 'admin';
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <nav className="hidden md:flex items-center space-x-6 text-sm font-medium mx-6">
