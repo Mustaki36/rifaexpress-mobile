@@ -84,7 +84,7 @@ export function AdminLoginForm() {
             </div>
             <CardTitle>Acceso de Administrador</CardTitle>
             <CardDescription>
-            Ingresa tus credenciales para gestionar las rifas.
+            Tu próxima gran victoria comienza aquí.
             </CardDescription>
         </CardHeader>
         <CardContent>
