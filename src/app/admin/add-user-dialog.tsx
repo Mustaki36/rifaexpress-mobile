@@ -79,11 +79,11 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
         const { street, city, state, postalCode, country, confirmPassword, ...restOfValues } = values;
         const address = { street, city, state, postalCode, country };
-        addUser({...restOfValues, address});
+        await addUser({...restOfValues, address});
         toast({
             title: "Usuario Creado",
             description: `El usuario ${values.name} ha sido añadido al sistema.`,

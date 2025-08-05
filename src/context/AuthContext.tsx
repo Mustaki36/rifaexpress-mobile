@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -40,6 +41,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { blockedUsers } = useBlock(); // We'll keep using the mock block context for now
 
+  const fetchAllUsers = async () => {
+    const querySnapshot = await getDocs(collection(db, "users"));
+    const usersList = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+            id: doc.id, 
+            ...data,
+            createdAt: data.createdAt?.toDate() // Convert timestamp to Date
+        } as UserProfile
+    });
+    setAllUsers(usersList);
+  };
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
@@ -74,18 +89,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const fetchAllUsers = async () => {
-    const querySnapshot = await getDocs(collection(db, "users"));
-    const usersList = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return { 
-            id: doc.id, 
-            ...data,
-            createdAt: data.createdAt?.toDate() // Convert timestamp to Date
-        } as UserProfile
-    });
-    setAllUsers(usersList);
-  };
 
 
   const isEmailBlocked = (email: string) => {
@@ -166,13 +169,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       mustChangePassword: true, // Force password change on first login
     };
 
-    const docRef = await addDoc(collection(db, "users"), {
+    await addDoc(collection(db, "users"), {
         ...newUser,
         createdAt: serverTimestamp()
     });
 
-    // Update the local state optimistically.
-    setAllUsers(prev => [...prev, {id: docRef.id, createdAt: new Date(), ...newUser}])
+    // Fetch all users again to get the updated list
+    await fetchAllUsers();
   }
   
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
