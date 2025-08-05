@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -67,14 +67,15 @@ export function UsersList() {
   const [blockReason, setBlockReason] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>(allUsers);
-
-  useEffect(() => {
-    const results = allUsers.filter(user =>
+  
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm) {
+      return allUsers;
+    }
+    return allUsers.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    setFilteredUsers(results);
   }, [searchTerm, allUsers]);
 
 
