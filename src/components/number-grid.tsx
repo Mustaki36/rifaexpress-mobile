@@ -1,5 +1,4 @@
 
-import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -22,20 +21,23 @@ export function NumberGrid({
   pricePerTicket,
 }: NumberGridProps) {
   const numbers = Array.from({ length: totalTickets }, (_, i) => i + 1);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioUrl = "https://storage.googleapis.com/tfjs-models/demos/rps/coin.mp3";
 
   const handleSelect = (number: number) => {
     onSelectNumber(number);
     // Play sound only when selecting, not deselecting
-    if (!selectedNumbers.includes(number) && audioRef.current) {
-      audioRef.current.load();
-      audioRef.current.play();
+    if (!selectedNumbers.includes(number)) {
+      try {
+        const audio = new Audio(audioUrl);
+        audio.play();
+      } catch (e) {
+        console.error("Error playing sound:", e);
+      }
     }
   }
 
   return (
     <TooltipProvider delayDuration={100}>
-        <audio ref={audioRef} src="https://storage.googleapis.com/tfjs-models/demos/rps/coin.mp3" preload="auto"></audio>
       <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-80 overflow-y-auto p-2 bg-muted/50 rounded-md">
         {numbers.map((number) => {
           const isSold = soldTickets.includes(number);
