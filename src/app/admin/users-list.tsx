@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -145,7 +146,7 @@ export function UsersList() {
                     <Card>
                         <CardHeader><CardTitle className="flex items-center gap-2 text-lg"><User />Información Personal</CardTitle></CardHeader>
                         <CardContent className="space-y-3 text-sm">
-                            <p><strong className="font-medium text-muted-foreground w-24 inline-block">Rol:</strong> <Badge variant={selectedUser.role === 'creator' ? "default" : "secondary"}>{selectedUser.role === 'creator' ? 'Creador' : 'Regular'}</Badge></p>
+                            <div className="flex items-center"><strong className="font-medium text-muted-foreground w-24 inline-block">Rol:</strong> <Badge variant={selectedUser.role === 'creator' ? "default" : "secondary"}>{selectedUser.role === 'creator' ? 'Creador' : 'Regular'}</Badge></div>
                             <p><strong className="font-medium text-muted-foreground w-24 inline-block">Teléfono:</strong> {selectedUser.phone || 'No disponible'}</p>
                             <p><strong className="font-medium text-muted-foreground w-24 inline-block">Registrado:</strong> {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'N/A'}</p>
                         </CardContent>
