@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { blockedUsers } = useBlock();
 
+  // Función para obtener todos los usuarios de la colección "users" en Firestore.
   const fetchAllUsers = async () => {
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -48,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return { 
                 id: doc.id, 
                 ...data,
-                createdAt: data.createdAt?.toDate() // Convert timestamp to Date
+                createdAt: data.createdAt?.toDate() // Convertir timestamp a Date
             } as UserProfile
         });
         setAllUsers(usersList);
@@ -57,17 +58,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-
+  // Efecto que se ejecuta al cargar el componente para escuchar cambios en la autenticación.
   useEffect(() => {
+    // onAuthStateChanged es el listener principal de Firebase Auth.
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       if (user) {
+        // Lógica para el usuario administrador (no está en Firebase Auth).
         if (user.email === MOCK_ADMIN_USER.email) {
             setCurrentUser(MOCK_ADMIN_USER);
             setLoading(false);
             return;
         }
-
+        // Si hay un usuario, busca su perfil en la base de datos Firestore.
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
@@ -91,23 +94,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-
-
+  // Función para verificar si un email está en la lista de bloqueo.
   const isEmailBlocked = (email: string) => {
     return blockedUsers.some(u => u.email === email);
   }
 
+  // Función para iniciar sesión.
   const login = async (email: string, pass: string): Promise<UserProfile | null> => {
     if(isEmailBlocked(email)) {
       throw new Error("Este email ha sido bloqueado.");
     }
     
+    // Lógica para el login del administrador.
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
       setFirebaseUser({ email: MOCK_ADMIN_USER.email } as FirebaseUser);
       setCurrentUser(MOCK_ADMIN_USER);
       return MOCK_ADMIN_USER;
     }
-
+    
+    // signInWithEmailAndPassword es la función de Firebase para autenticar.
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     const userDocRef = doc(db, "users", userCredential.user.uid);
     const userDocSnap = await getDoc(userDocRef);
@@ -116,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userData = userDocSnap.data();
         const userProfile = { id: userCredential.user.uid, ...userData } as UserProfile;
         
+        // Simulación de verificación de contraseña guardada en Firestore.
         if (userData.password !== pass) {
             throw new Error("auth/invalid-credential");
         }
@@ -127,23 +133,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return null;
   };
 
+  // Función para cerrar sesión.
   const logout = async () => {
     if (currentUser?.role === 'admin') {
       setCurrentUser(null);
       setFirebaseUser(null);
     } else {
+      // signOut es la función de Firebase para cerrar la sesión.
       await signOut(auth);
     }
   };
   
+  // Función para registrar un nuevo usuario.
   const signup = async (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
     if (isEmailBlocked(email)) {
       throw new Error("Este email ha sido bloqueado.");
     }
 
+    // 1. Crea la cuenta en Firebase Authentication.
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
-
+    
+    // 2. Crea el documento del perfil del usuario en la base de datos Firestore.
     const newUserProfile: Omit<UserProfile, 'id' | 'createdAt'> = {
        name,
        email,
@@ -157,19 +168,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        mustChangePassword: false,
     };
 
+    // setDoc crea o sobrescribe un documento en Firestore.
     await setDoc(doc(db, "users", user.uid), {
         ...newUserProfile,
-        createdAt: serverTimestamp(),
+        createdAt: serverTimestamp(), // Guarda la fecha actual del servidor.
     });
     
-    await fetchAllUsers();
+    await fetchAllUsers(); // Actualiza la lista de usuarios.
   };
 
+  // Función para que un administrador añada un usuario.
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
      if (isEmailBlocked(userData.email)) {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
     
+    // Verifica si el email ya existe en la base de datos.
     const q = query(collection(db, "users"), where("email", "==", userData.email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -193,7 +207,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           createdAt: serverTimestamp(),
         };
 
+        // addDoc crea un nuevo documento con un ID autogenerado en Firestore.
         const docRef = await addDoc(collection(db, "users"), newUserProfileData);
+        // Actualiza el estado local para que el cambio se vea al instante.
         setAllUsers(prevUsers => [...prevUsers, { id: docRef.id, ...newUserProfileData, createdAt: new Date() } as UserProfile]);
 
     } catch (error) {
@@ -202,10 +218,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
   
+  // Función para editar un usuario existente.
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
     const userDocRef = doc(db, "users", userId);
+    // updateDoc actualiza los campos de un documento existente.
     await updateDoc(userDocRef, userData);
     
+    // Actualiza el estado local para reflejar los cambios.
     setAllUsers(prevUsers => prevUsers.map(user => user.id === userId ? { ...user, ...userData } : user));
 
     if (currentUser?.id === userId) {
@@ -213,16 +232,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Función para forzar el cambio de contraseña.
   const forcePasswordChange = async (userId: string, newPass: string) => {
       await editUser(userId, { password: newPass, mustChangePassword: false });
   }
 
+  // Función para eliminar un usuario.
   const deleteUser = async (userId: string) => {
     console.warn(`Eliminando usuario ${userId} solo de Firestore. El usuario de Auth todavía puede existir.`);
+    // deleteDoc elimina un documento de Firestore.
     await deleteDoc(doc(db, "users", userId));
+    // Actualiza el estado local.
     setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
   }
-
 
   return (
     <AuthContext.Provider value={{ user: currentUser, firebaseUser, allUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>

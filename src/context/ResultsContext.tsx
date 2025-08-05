@@ -16,6 +16,8 @@ const ResultsContext = createContext<ResultsContextType | undefined>(undefined);
 export const ResultsProvider = ({ children }: { children: ReactNode }) => {
   const [results, setResults] = useState<RaffleResult[]>([]);
 
+  // onSnapshot crea un listener en tiempo real para la colección "results".
+  // Mantiene la lista de resultados siempre actualizada.
   useEffect(() => {
     const q = query(collection(db, "results"), orderBy("drawDate", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -31,6 +33,7 @@ export const ResultsProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  // Función para eliminar un resultado del historial.
   const deleteResult = async (resultId: string) => {
     await deleteDoc(doc(db, "results", resultId));
   };

@@ -18,6 +18,8 @@ const BlockContext = createContext<BlockContextType | undefined>(undefined);
 export const BlockProvider = ({ children }: { children: ReactNode }) => {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
 
+  // onSnapshot crea un listener en tiempo real para la colección "blockedUsers".
+  // Esto mantiene la lista de usuarios bloqueados sincronizada en toda la aplicación.
   useEffect(() => {
       const q = query(collection(db, "blockedUsers"));
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -34,6 +36,7 @@ export const BlockProvider = ({ children }: { children: ReactNode }) => {
       return () => unsubscribe();
   }, []);
 
+  // Función para añadir un nuevo usuario a la colección de bloqueados.
   const blockUser = async (email: string, reason: string) => {
     const isAlreadyBlocked = blockedUsers.some(u => u.email === email);
     if(isAlreadyBlocked) return;
@@ -46,7 +49,9 @@ export const BlockProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // Función para eliminar un usuario de la colección de bloqueados.
   const unblockUser = async (email: string) => {
+    // Busca el documento por email para obtener su ID y poder borrarlo.
     const q = query(collection(db, "blockedUsers"), where("email", "==", email));
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach(async (document) => {
@@ -54,6 +59,7 @@ export const BlockProvider = ({ children }: { children: ReactNode }) => {
     });
   };
   
+  // Función para actualizar las notas sobre un usuario bloqueado.
   const updateNotes = async (email: string, notes: string) => {
     const q = query(collection(db, "blockedUsers"), where("email", "==", email));
     const querySnapshot = await getDocs(q);
