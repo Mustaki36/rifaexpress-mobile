@@ -11,23 +11,23 @@ import { Button } from "@/components/ui/button";
 import { HistoryList } from "./history-list";
 import { BlockedUsersList } from "./blocked-users-list";
 import { UsersList } from "./users-list";
-
-// This is a simple flag to keep the admin logged in during the session.
-// In a real app, use a proper session management system.
-let adminIsLoggedIn = false;
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 
 function AdminDashboard() {
-  const [isLoggedIn, setIsLoggedIn] = useState(adminIsLoggedIn);
+  const { user, logout } = useAuth();
+  const [isLoggedIn, setIsLoggedIn] = useState(!!user && user.role === 'admin');
+  const router = useRouter();
   
   const handleLogin = () => {
-    adminIsLoggedIn = true;
     setIsLoggedIn(true);
   };
   
   const handleLogout = () => {
-    adminIsLoggedIn = false;
+    logout();
     setIsLoggedIn(false);
+    router.push("/");
   };
 
   if (!isLoggedIn) {

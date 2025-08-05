@@ -1,4 +1,17 @@
+
 import type { Raffle, RaffleResult, UserProfile } from './types';
+
+export const MOCK_ADMIN_USER: UserProfile = {
+  id: 'admin-user-id',
+  name: 'Admin',
+  email: 'admin@rifasxpress.com',
+  password: 'password',
+  isVerified: true,
+  avatar: 'https://placehold.co/100x100.png?text=A',
+  role: 'admin',
+  createdAt: new Date(),
+  tickets: [],
+};
 
 export const MOCK_RAFFLES: Raffle[] = [
   {
@@ -90,6 +103,7 @@ export const MOCK_USER: UserProfile = {
   id: 'user-123',
   name: 'Juan Pérez',
   email: 'juan.perez@example.com',
+  password: 'password123',
   isVerified: false,
   phone: '787-123-4567',
   address: {

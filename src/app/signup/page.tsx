@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -53,7 +54,7 @@ const formSchema = z.object({
 type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
 
 export default function SignupPage() {
-  const { signup, requestVerificationCode, verifyCode, isEmailBlocked } = useAuth();
+  const { signup, requestVerificationCode, verifyCode, isEmailBlocked, allUsers } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -212,6 +213,11 @@ export default function SignupPage() {
     if (isEmailBlocked(email)) {
        toast({ variant: "destructive", title: "Email Bloqueado", description: "Este email ha sido bloqueado por demasiados intentos fallidos." });
       return;
+    }
+
+     if (allUsers.some(u => u.email === email)) {
+        toast({ variant: "destructive", title: "Email en uso", description: "Este email ya está registrado. Por favor, inicia sesión." });
+        return;
     }
 
     setIsSendingCode(true);

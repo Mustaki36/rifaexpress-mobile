@@ -23,15 +23,14 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+
 
 const formSchema = z.object({
-  username: z.string().email("Debe ser un email válido."),
+  email: z.string().email("Debe ser un email válido."),
   password: z.string().min(1, "La contraseña es requerida."),
 });
-
-// IMPORTANT: These are mock credentials. In a real app, use a secure auth system.
-const ADMIN_USERNAME = "admin@rifasxpress.com";
-const ADMIN_PASSWORD = "password";
 
 
 interface AdminLoginFormProps {
@@ -40,17 +39,21 @@ interface AdminLoginFormProps {
 
 export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   const { toast } = useToast();
+  const { login } = useAuth();
+  const router = useRouter();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (values.username === ADMIN_USERNAME && values.password === ADMIN_PASSWORD) {
+    const user = login(values.email, values.password);
+
+    if (user && user.role === 'admin') {
        toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión como administrador.",
@@ -60,7 +63,7 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
         toast({
             variant: "destructive",
             title: "Error de autenticación",
-            description: "Credenciales de administrador incorrectas.",
+            description: "Credenciales de administrador incorrectas o el usuario no es administrador.",
         })
     }
   }
@@ -82,7 +85,7 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Email de Administrador</FormLabel>

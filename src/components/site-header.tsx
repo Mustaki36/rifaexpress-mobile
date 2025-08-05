@@ -26,7 +26,7 @@ export function SiteHeader() {
     router.push("/");
   };
   
-  const homeLink = '/';
+  const homeLink = user?.role === 'admin' ? '/admin' : '/';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -40,7 +40,7 @@ export function SiteHeader() {
         <div className="flex flex-1 items-center justify-end space-x-4">
           <MainNav />
           <nav className="flex items-center space-x-2">
-            {isAuthenticated && user ? (
+            {isAuthenticated && user && user.role !== 'admin' ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -77,14 +77,16 @@ export function SiteHeader() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <>
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Iniciar Sesión</Link>
-                </Button>
-                <Button asChild className="hidden sm:inline-flex">
-                  <Link href="/signup">Registrarse</Link>
-                </Button>
-              </>
+              !user && (
+                <>
+                  <Button variant="ghost" asChild>
+                    <Link href="/login">Iniciar Sesión</Link>
+                  </Button>
+                  <Button asChild className="hidden sm:inline-flex">
+                    <Link href="/signup">Registrarse</Link>
+                  </Button>
+                </>
+              )
             )}
           </nav>
         </div>

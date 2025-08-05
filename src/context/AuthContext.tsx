@@ -3,12 +3,12 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { UserProfile, VerificationInfo, Address } from '@/lib/types';
-import { MOCK_USER } from '@/lib/data';
+import { MOCK_USER, MOCK_ADMIN_USER } from '@/lib/data';
 import crypto from 'crypto';
 import { useBlock } from './BlockContext';
 
 // This is a mock user database. In a real application, this would be a database.
-const initialUsers: UserProfile[] = [MOCK_USER];
+const initialUsers: UserProfile[] = [MOCK_USER, MOCK_ADMIN_USER];
 
 // This is a mock verification code store. In a real app, use a DB or a service like Redis.
 const verificationStore = new Map<string, VerificationInfo>();
@@ -158,10 +158,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    // This is a simplified signup. For admin, we use a separate login.
-     if (role === 'admin') {
-       throw new Error("Cannot sign up as admin.");
-     }
+    if (users.some(u => u.email === email)) {
+        throw new Error("El email ya está registrado.");
+    }
     const newUserProfile: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt'> = {
        name,
        email,
