@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,15 +12,24 @@ import { HistoryList } from "./history-list";
 import { BlockedUsersList } from "./blocked-users-list";
 import { UsersList } from "./users-list";
 
+// Simulate a persistent session state outside the component
+let adminIsLoggedIn = false;
+
 function AdminDashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(adminIsLoggedIn);
+
+  const handleLoginSuccess = () => {
+    adminIsLoggedIn = true;
+    setIsAuthenticated(true);
+  };
 
   const handleLogout = () => {
+    adminIsLoggedIn = false;
     setIsAuthenticated(false);
   };
 
   if (!isAuthenticated) {
-    return <AdminLoginForm onLoginSuccess={() => setIsAuthenticated(true)} />;
+    return <AdminLoginForm onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
