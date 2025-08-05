@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RafflesList } from "./raffles-list";
 import { ListOrdered, Shield, LogOut, History, ShieldX, Users } from "lucide-react";
@@ -10,21 +11,27 @@ import { Button } from "@/components/ui/button";
 import { HistoryList } from "./history-list";
 import { BlockedUsersList } from "./blocked-users-list";
 import { UsersList } from "./users-list";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+
+// This is a simple flag to keep the admin logged in during the session.
+// In a real app, use a proper session management system.
+let adminIsLoggedIn = false;
+
 
 function AdminDashboard() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const router = useRouter();
-
+  const [isLoggedIn, setIsLoggedIn] = useState(adminIsLoggedIn);
+  
+  const handleLogin = () => {
+    adminIsLoggedIn = true;
+    setIsLoggedIn(true);
+  };
+  
   const handleLogout = () => {
-    logout();
-    router.push("/");
+    adminIsLoggedIn = false;
+    setIsLoggedIn(false);
   };
 
-  // Redirect to login if not authenticated or not an admin
-  if (!isAuthenticated || user?.role !== 'admin') {
-    return <AdminLoginForm onLoginSuccess={() => {}} />;
+  if (!isLoggedIn) {
+    return <AdminLoginForm onLoginSuccess={handleLogin} />;
   }
 
   return (

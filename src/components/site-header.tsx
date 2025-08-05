@@ -26,7 +26,7 @@ export function SiteHeader() {
     router.push("/");
   };
   
-  const homeLink = isAuthenticated && user?.role === 'admin' ? '/admin' : '/';
+  const homeLink = '/';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">

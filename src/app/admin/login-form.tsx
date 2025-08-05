@@ -23,13 +23,16 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
-  username: z.string().min(1, "El nombre de usuario es requerido."),
+  username: z.string().email("Debe ser un email válido."),
   password: z.string().min(1, "La contraseña es requerida."),
 });
+
+// IMPORTANT: These are mock credentials. In a real app, use a secure auth system.
+const ADMIN_USERNAME = "admin@rifasxpress.com";
+const ADMIN_PASSWORD = "password";
+
 
 interface AdminLoginFormProps {
     onLoginSuccess: () => void;
@@ -37,8 +40,6 @@ interface AdminLoginFormProps {
 
 export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   const { toast } = useToast();
-  const { login } = useAuth();
-  const router = useRouter();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,22 +50,17 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // IMPORTANT: This now uses the main login system.
-    // The default admin email is 'admin@rifasxpress.com' and password is 'password'.
-    const user = login(values.username, values.password);
-
-    if (user && user.role === 'admin') {
+    if (values.username === ADMIN_USERNAME && values.password === ADMIN_PASSWORD) {
        toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión como administrador.",
       });
       onLoginSuccess();
-      // No need to router.push, the parent component will re-render.
     } else {
         toast({
             variant: "destructive",
             title: "Error de autenticación",
-            description: "Credenciales de administrador incorrectas o no tienes permiso.",
+            description: "Credenciales de administrador incorrectas.",
         })
     }
   }

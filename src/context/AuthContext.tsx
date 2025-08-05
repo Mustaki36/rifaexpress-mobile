@@ -7,20 +7,8 @@ import { MOCK_USER } from '@/lib/data';
 import crypto from 'crypto';
 import { useBlock } from './BlockContext';
 
-// Admin User
-const ADMIN_USER: UserProfile = {
-  id: 'admin-user-id',
-  name: 'Admin',
-  email: 'admin@rifasxpress.com',
-  isVerified: true,
-  role: 'admin',
-  createdAt: new Date(),
-  tickets: [],
-  password: 'password' // This is for the admin panel login
-};
-
 // This is a mock user database. In a real application, this would be a database.
-const initialUsers: UserProfile[] = [MOCK_USER, ADMIN_USER];
+const initialUsers: UserProfile[] = [MOCK_USER];
 
 // This is a mock verification code store. In a real app, use a DB or a service like Redis.
 const verificationStore = new Map<string, VerificationInfo>();
@@ -170,7 +158,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const signup = (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    addUser({ name, email, password: pass, phone, address, role });
+    // This is a simplified signup. For admin, we use a separate login.
+     if (role === 'admin') {
+       throw new Error("Cannot sign up as admin.");
+     }
+    const newUserProfile: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt'> = {
+       name,
+       email,
+       password: pass,
+       phone,
+       address,
+       isVerified,
+       role
+    };
+
+    addUser(newUserProfile);
     // Automatically log in the new user
     login(email, pass); 
   };
