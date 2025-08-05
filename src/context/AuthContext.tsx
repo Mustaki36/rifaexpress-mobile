@@ -12,13 +12,13 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
-import { MOCK_ADMIN_USER } from '@/lib/data'; // We'll keep this for now for the admin role
+import { MOCK_ADMIN_USER } from '@/lib/data';
 import { useBlock } from './BlockContext';
 
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
-  allUsers: UserProfile[]; // This will now also be fetched from Firestore
+  allUsers: UserProfile[];
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, pass: string) => Promise<UserProfile | null>;
@@ -58,7 +58,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       if (user) {
-        // Handle mock admin login separately
         if (user.email === MOCK_ADMIN_USER.email) {
             setCurrentUser(MOCK_ADMIN_USER);
             setLoading(false);
@@ -99,9 +98,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado.");
     }
     
+    // Admin login is special cased and doesn't hit Firebase Auth
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
-        setCurrentUser(MOCK_ADMIN_USER);
-        return MOCK_ADMIN_USER;
+      // Simulate a Firebase user object for the admin to satisfy other parts of the app
+      setFirebaseUser({ email: MOCK_ADMIN_USER.email } as FirebaseUser);
+      setCurrentUser(MOCK_ADMIN_USER);
+      return MOCK_ADMIN_USER;
     }
 
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
@@ -118,9 +120,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    // If admin is logging out, just clear state without signing out of firebase
     if (currentUser?.role === 'admin') {
       setCurrentUser(null);
+      setFirebaseUser(null);
     } else {
       await signOut(auth);
     }
@@ -159,10 +161,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      if (isEmailBlocked(userData.email)) {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
+    
+    console.warn(`Simulating Auth creation for ${userData.email}. In production, use a Cloud Function with the Admin SDK to create the user in Firebase Auth.`);
 
-    // In a real app, this would be a secure backend Cloud Function.
-    // For this simulation, we are temporarily creating a new user on the client, which is insecure.
-    // We create the user, but we don't sign them in. The admin remains logged in.
     try {
         const newUserProfileData = {
           name: userData.name,
@@ -174,25 +175,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
           mustChangePassword: true,
-          password: userData.password, // This is for local logic, not a secure practice.
+          password: userData.password,
           createdAt: serverTimestamp(),
         };
 
-        // Add to the 'users' collection with an auto-generated ID
-        const newUserDocRef = await addDoc(collection(db, "users"), newUserProfileData);
-        
-        // This is a placeholder for creating the user in Firebase Auth
-        // In a real app, you would use a Cloud Function that calls the Admin SDK:
-        // admin.auth().createUser({ email: userData.email, password: userData.password });
-        console.warn(`Simulating Auth creation for ${userData.email}. In production, use a Cloud Function.`);
-        
+        await addDoc(collection(db, "users"), newUserProfileData);
         await fetchAllUsers();
 
     } catch (error) {
-        console.error("Error creating user:", error);
-        if (error instanceof Error && error.message.includes('auth/email-already-in-use')) {
-            throw new Error('Este email ya está en uso.');
-        }
+        console.error("Error creating user in Firestore:", error);
         throw new Error('No se pudo crear el usuario en Firestore.');
     }
   }
@@ -221,7 +212,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const deleteUser = async (userId: string) => {
-    console.warn("deleteUser only removes the Firestore document, not the Auth user.");
+    // In a real app, this would be a Cloud Function that also deletes the Firebase Auth user.
+    console.warn(`Deleting user ${userId} from Firestore only. The Auth user still exists.`);
     await deleteDoc(doc(db, "users", userId));
     await fetchAllUsers();
   }
