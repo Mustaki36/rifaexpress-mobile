@@ -24,23 +24,15 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-
 
 const formSchema = z.object({
   email: z.string().email("Debe ser un email válido."),
   password: z.string().min(1, "La contraseña es requerida."),
 });
 
-
-interface AdminLoginFormProps {
-    onLoginSuccess: () => void;
-}
-
-export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
+export function AdminLoginForm() {
   const { toast } = useToast();
   const { login } = useAuth();
-  const router = useRouter();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -58,7 +50,7 @@ export function AdminLoginForm({ onLoginSuccess }: AdminLoginFormProps) {
         title: "¡Bienvenido!",
         description: "Has iniciado sesión como administrador.",
       });
-      onLoginSuccess();
+      // The parent component will re-render and show the dashboard
     } else {
         toast({
             variant: "destructive",

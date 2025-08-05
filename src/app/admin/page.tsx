@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RafflesList } from "./raffles-list";
 import { ListOrdered, Shield, LogOut, History, ShieldX, Users } from "lucide-react";
@@ -16,22 +15,18 @@ import { useRouter } from "next/navigation";
 
 
 function AdminDashboard() {
-  const { user, logout } = useAuth();
-  const [isLoggedIn, setIsLoggedIn] = useState(!!user && user.role === 'admin');
+  const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
-  
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
   
   const handleLogout = () => {
     logout();
-    setIsLoggedIn(false);
     router.push("/");
   };
 
-  if (!isLoggedIn) {
-    return <AdminLoginForm onLoginSuccess={handleLogin} />;
+  const isAdmin = isAuthenticated && user?.role === 'admin';
+
+  if (!isAdmin) {
+    return <AdminLoginForm />;
   }
 
   return (
