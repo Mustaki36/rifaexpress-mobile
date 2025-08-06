@@ -1,27 +1,21 @@
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyC68jUWqV_62IvWxsQvzpzDNlos7ikczrM",
-  authDomain: "rifasexpress-b51e9.firebaseapp.com",
-  projectId: "rifasexpress-b51e9",
-  storageBucket: "rifasexpress-b51e9.firebasestorage.app",
-  messagingSenderId: "4583104375",
-  appId: "1:4583104375:web:9ff56f07b2e589f222cb72",
-  measurementId: "G-DWGRY2Z306"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-
 // Initialize Firebase
-// Esta línea inicializa la conexión con Firebase.
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-// Exportamos los servicios que usaremos en la aplicación.
-export const auth = getAuth(app); // Servicio de Autenticación
-export const db = getFirestore(app); // Servicio de Base de Datos (Firestore)
-
+export { app, auth, db };
