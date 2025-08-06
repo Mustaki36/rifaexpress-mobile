@@ -25,7 +25,7 @@ export default function RafflePage() {
   const params = useParams();
   const router = useRouter();
   const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser } = useRaffles();
-  const { user, isAuthenticated, firebaseUser } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const raffleId = params.id as string;
   const raffle = raffles.find((r) => r.id === raffleId);
   
@@ -73,11 +73,11 @@ export default function RafflePage() {
   // When the component unmounts (user navigates away), release their reservations
   useEffect(() => {
     return () => {
-      if (firebaseUser?.uid && raffleId) {
-        releaseTicketsForUser(firebaseUser.uid, raffleId);
+      if (user?.id && raffleId) {
+        releaseTicketsForUser(user.id, raffleId);
       }
     };
-  }, [firebaseUser?.uid, raffleId, releaseTicketsForUser]);
+  }, [user?.id, raffleId, releaseTicketsForUser]);
 
   if (!raffle) {
     return (
@@ -89,18 +89,18 @@ export default function RafflePage() {
   }
 
   const handleNumberSelect = (number: number) => {
-    if (!isAuthenticated || !firebaseUser) {
+    if (!isAuthenticated || !user) {
       setIsAuthDialogOpen(true);
       return;
     }
     
     if (selectedNumbers.includes(number)) {
       // User is de-selecting a number
-      releaseTicket(raffle.id, number, firebaseUser.uid);
+      releaseTicket(raffle.id, number, user.id);
       setSelectedNumbers((prev) => prev.filter((n) => n !== number));
     } else {
       // User is selecting a number, try to reserve it
-      const success = reserveTicket(raffle.id, number, firebaseUser.uid);
+      const success = reserveTicket(raffle.id, number, user.id);
       if (success) {
         setSelectedNumbers((prev) => [...prev, number]);
       } else {
@@ -123,37 +123,39 @@ export default function RafflePage() {
       return;
     }
 
-    if (!isAuthenticated || !firebaseUser) {
+    if (!isAuthenticated || !user) {
       setIsAuthDialogOpen(true);
       return;
     }
     
     setIsPurchasing(true);
     try {
-        await purchaseTickets(raffle.id, selectedNumbers, firebaseUser.uid);
+        await purchaseTickets(raffle.id, selectedNumbers, user.id);
 
-        // Update user's tickets in Firestore
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            const newTicketRecord = {
-                raffleId: raffle.id,
-                raffleTitle: raffle.title,
-                ticketNumbers: selectedNumbers,
-            };
+        if (user.id !== 'admin-user-id') {
+            // Update user's tickets in Firestore
+            const userDocRef = doc(db, "users", user.id);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                const newTicketRecord = {
+                    raffleId: raffle.id,
+                    raffleTitle: raffle.title,
+                    ticketNumbers: selectedNumbers,
+                };
 
-            const existingRaffleIndex = userData.tickets.findIndex((t: any) => t.raffleId === raffle.id);
-            let updatedTickets = [...userData.tickets];
+                const existingRaffleIndex = userData.tickets.findIndex((t: any) => t.raffleId === raffle.id);
+                let updatedTickets = [...userData.tickets];
 
-            if (existingRaffleIndex > -1) {
-                const existingRecord = updatedTickets[existingRaffleIndex];
-                const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
-                updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
-            } else {
-                updatedTickets.push(newTicketRecord);
+                if (existingRaffleIndex > -1) {
+                    const existingRecord = updatedTickets[existingRaffleIndex];
+                    const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
+                    updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
+                } else {
+                    updatedTickets.push(newTicketRecord);
+                }
+                await updateDoc(userDocRef, { tickets: updatedTickets });
             }
-            await updateDoc(userDocRef, { tickets: updatedTickets });
         }
         
         toast({
@@ -298,3 +300,4 @@ export default function RafflePage() {
     </Template>
   );
 }
+
