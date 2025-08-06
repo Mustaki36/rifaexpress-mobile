@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -46,10 +47,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const querySnapshot = await getDocs(collection(db, "users"));
         const usersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
+            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
             return { 
                 id: doc.id, 
                 ...data,
-                createdAt: data.createdAt?.toDate() // Convertir timestamp a Date
+                createdAt: createdAt
             } as UserProfile
         });
         setAllUsers(usersList);
@@ -71,10 +73,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
           const userProfile = { 
               id: user.uid, 
               ...userData,
-              createdAt: userData.createdAt?.toDate()
+              createdAt: createdAt
           } as UserProfile;
           setCurrentUser(userProfile);
           // Also update the allUsers state if this user is somehow not there
@@ -126,10 +129,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
+            const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
             const userProfile = { 
                 id: userCredential.user.uid, 
                 ...userData,
-                createdAt: userData.createdAt.toDate()
+                createdAt: createdAt
             } as UserProfile;
             setCurrentUser(userProfile);
             return userProfile;
@@ -145,10 +149,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (!querySnapshot.empty) {
             const userDoc = querySnapshot.docs[0];
+            const userData = userDoc.data();
+            const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
             const localUser = { 
                 id: userDoc.id, 
-                ...userDoc.data(),
-                createdAt: userDoc.data().createdAt.toDate()
+                ...userData,
+                createdAt: createdAt
             } as UserProfile;
 
             if (localUser) {
@@ -294,4 +300,5 @@ export const useAuth = () => {
   return context;
 };
 
+    
     

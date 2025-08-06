@@ -43,26 +43,27 @@ export default function RafflePage() {
   }, [raffle]);
 
   useEffect(() => {
-    if (isRaffleSoldOut && raffle && !lotteryInfo && !isLoadingLottery) {
-        const fetchLotteryInfo = async () => {
-            setIsLoadingLottery(true);
-            try {
-                const info = await getLotteryInfo({ totalTickets: raffle.totalTickets });
-                setLotteryInfo(info);
-            } catch (error) {
-                console.error("Error fetching lottery info:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Error de IA",
-                    description: "No se pudo obtener la información del próximo sorteo.",
-                });
-            } finally {
-                setIsLoadingLottery(false);
-            }
-        };
-        fetchLotteryInfo();
+    if (raffle && isRaffleSoldOut && !lotteryInfo) {
+      const fetchLotteryInfo = async () => {
+        setIsLoadingLottery(true);
+        try {
+          const info = await getLotteryInfo({ totalTickets: raffle.totalTickets });
+          setLotteryInfo(info);
+        } catch (error) {
+          console.error("Error fetching lottery info:", error);
+          toast({
+            variant: "destructive",
+            title: "Error de IA",
+            description: "No se pudo obtener la información del próximo sorteo.",
+          });
+        } finally {
+          setIsLoadingLottery(false);
+        }
+      };
+      fetchLotteryInfo();
     }
-  }, [isRaffleSoldOut, raffle, lotteryInfo, isLoadingLottery, toast]);
+  }, [isRaffleSoldOut, raffle, lotteryInfo, toast]);
+
 
   const otherUsersReservedTickets = useMemo(() => {
     return reservedTickets
@@ -301,3 +302,6 @@ export default function RafflePage() {
   );
 }
 
+
+
+    
