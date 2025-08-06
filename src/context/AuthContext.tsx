@@ -181,9 +181,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
            role,
            avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
            tickets: [],
-           password: pass, // Storing password for admin-created user compatibility
            mustChangePassword: false,
            createdAt: serverTimestamp(),
+           // DO NOT store the password in Firestore for real users.
+           // The password property is only for mock/admin-created users.
         };
     
         const userDocRef = doc(db, "users", user.uid);
