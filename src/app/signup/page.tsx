@@ -91,7 +91,6 @@ export default function SignupPage() {
   
     const emailValue = form.watch("email");
 
-
   useEffect(() => {
     if (!isVerificationEnabled || !isClient) return;
 
@@ -186,7 +185,6 @@ export default function SignupPage() {
         toast({ variant: "destructive", title: "Error en la verificación", description: errorMessage });
     }
   }
-
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const isVerified = idVerificationStatus === 'success';
@@ -397,7 +395,6 @@ export default function SignupPage() {
                   />
               </div>
 
-
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormField
                   control={form.control}
@@ -485,7 +482,6 @@ export default function SignupPage() {
                     />
                 </div>
                 
-
                 {isClient && isVerificationEnabled && (
                   <Card className="bg-muted/50">
                       <CardHeader>

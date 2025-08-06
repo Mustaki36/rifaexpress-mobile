@@ -6,7 +6,6 @@ import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimest
 import { db } from '@/lib/firebase';
 import type { Raffle, ReservedTicket } from '@/lib/types';
 
-// Reservación de boletos dura 5 minutos.
 const RESERVATION_TIME_MS = 5 * 60 * 1000;
 
 interface RaffleContextType {
@@ -29,8 +28,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // onSnapshot crea un listener en tiempo real a la colección "raffles".
-  // Cada vez que hay un cambio en la base de datos, este código se ejecuta y actualiza la UI.
   useEffect(() => {
     setLoading(true);
     const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
@@ -41,26 +38,24 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         return {
           id: doc.id,
           ...data,
-          drawDate: data.drawDate.toDate(), // Convertir Timestamp a Date
+          drawDate: data.drawDate.toDate(),
         } as Raffle;
       });
       setRaffles(rafflesData);
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Se desuscribe del listener al desmontar el componente.
+    return () => unsubscribe();
   }, []);
 
-  // Limpia periódicamente las reservaciones expiradas.
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
       setReservedTickets(prev => prev.filter(ticket => ticket.expiresAt > now));
-    }, 60 * 1000); // Revisa cada minuto.
+    }, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Añade una nueva rifa a Firestore.
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
     await addDoc(collection(db, "raffles"), {
         ...raffleData,
@@ -70,19 +65,16 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  // Edita una rifa existente en Firestore.
   const editRaffle = async (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => {
     const raffleDocRef = doc(db, "raffles", raffleId);
     await updateDoc(raffleDocRef, raffleData);
   };
 
-  // Elimina una rifa de Firestore.
   const deleteRaffle = async (raffleId: string) => {
     const raffleDocRef = doc(db, "raffles", raffleId);
     await deleteDoc(raffleDocRef);
   };
   
-  // Lógica para reservar un boleto (solo en el estado del cliente).
   const reserveTicket = (raffleId: string, number: number, userId: string): boolean => {
     const now = new Date();
     const validReservations = reservedTickets.filter(t => t.expiresAt > now);
@@ -120,19 +112,16 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
       ))
   }, []);
 
-  // Procesa la compra de boletos, actualizando el documento en Firestore.
   const purchaseTickets = async (raffleId: string, numbers: number[], userId: string) => {
      const raffleDocRef = doc(db, "raffles", raffleId);
      const raffle = raffles.find(r => r.id === raffleId);
      if (!raffle) throw new Error("Raffle not found");
      
-     // Actualiza el array de boletos vendidos en el documento de la rifa.
-     const newSoldTickets = [...raffle.soldTickets, ...numbers].sort((a,b) => a-b);
+     const newSoldTickets = [...new Set([...raffle.soldTickets, ...numbers])].sort((a,b) => a-b);
      await updateDoc(raffleDocRef, {
         soldTickets: newSoldTickets
      });
 
-     // Limpia las reservaciones locales que acaban de ser compradas.
      setReservedTickets(prev => prev.filter(
         t => !(t.raffleId === raffleId && numbers.includes(t.number) && t.userId === userId)
      ));

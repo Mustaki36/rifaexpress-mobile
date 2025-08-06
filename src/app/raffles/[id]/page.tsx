@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -43,7 +42,6 @@ export default function RafflePage() {
   }, [raffle]);
 
   useEffect(() => {
-    // Only fetch lottery info if the raffle is sold out and we don't have the info yet.
     if (raffle && isRaffleSoldOut && !lotteryInfo && !isLoadingLottery) {
       const fetchLotteryInfo = async () => {
         setIsLoadingLottery(true);
@@ -73,7 +71,6 @@ export default function RafflePage() {
       .map(t => t.number);
   }, [reservedTickets, raffleId, user?.id]);
 
-  // When the component unmounts (user navigates away), release their reservations
   useEffect(() => {
     return () => {
       if (user?.id && raffleId && selectedNumbers.length > 0) {
@@ -92,15 +89,12 @@ export default function RafflePage() {
   }
 
   const handleNumberSelect = (number: number) => {
-    // Guest users can select numbers which reserves them temporarily
     const currentUserId = user?.id || 'guest';
 
     if (selectedNumbers.includes(number)) {
-      // User is de-selecting a number
       releaseTicket(raffle.id, number, currentUserId);
       setSelectedNumbers((prev) => prev.filter((n) => n !== number));
     } else {
-      // User is selecting a number, try to reserve it
       const success = reserveTicket(raffle.id, number, currentUserId);
       if (success) {
         setSelectedNumbers((prev) => [...prev, number]);
@@ -134,7 +128,6 @@ export default function RafflePage() {
         await purchaseTickets(raffle.id, selectedNumbers, user.id);
 
         if (user.id !== 'admin-user-id') {
-            // Update user's tickets in Firestore
             const userDocRef = doc(db, "users", user.id);
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
@@ -150,7 +143,7 @@ export default function RafflePage() {
 
                 if (existingRaffleIndex > -1) {
                     const existingRecord = updatedTickets[existingRaffleIndex];
-                    const combinedNumbers = [...existingRecord.ticketNumbers, ...selectedNumbers].sort((a,b) => a-b);
+                    const combinedNumbers = [...new Set([...existingRecord.ticketNumbers, ...selectedNumbers])].sort((a,b) => a-b);
                     updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
                 } else {
                     updatedTickets.push(newTicketRecord);
@@ -164,8 +157,6 @@ export default function RafflePage() {
             description: `Has comprado ${selectedNumbers.length} boleto(s). ¡Mucha suerte!`,
         });
         setSelectedNumbers([]);
-        // Optional: redirect to profile page after purchase
-        // router.push('/profile');
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : "No se pudo completar la compra.";
         toast({ variant: "destructive", title: "Error en la compra", description: errorMessage });

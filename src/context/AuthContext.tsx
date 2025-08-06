@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -80,7 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               createdAt: createdAt
           } as UserProfile;
           setCurrentUser(userProfile);
-          // Also update the allUsers state if this user is somehow not there
            setAllUsers(prev => {
                 const userExists = prev.some(u => u.id === user.uid);
                 if (!userExists) {
@@ -111,7 +109,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado.");
     }
     
-    // Prioritize admin login check
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
       setCurrentUser(MOCK_ADMIN_USER);
       setFirebaseUser(null); 
@@ -121,7 +118,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     setIsAdminSession(false); 
     
-    // Then, try Firebase Auth
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
         const userDocRef = doc(db, "users", userCredential.user.uid);
@@ -138,12 +134,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(userProfile);
             return userProfile;
         } else {
-             // This case is unlikely if signup is working correctly, but good to have
              await signOut(auth);
              throw new Error("User profile not found in Firestore.");
         }
     } catch (firebaseError) {
-        // Fallback for admin-created users without a Firebase Auth account
         const q = query(collection(db, "users"), where("email", "==", email), where("password", "==", pass));
         const querySnapshot = await getDocs(q);
         
@@ -159,22 +153,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (localUser) {
               setCurrentUser(localUser);
-              setFirebaseUser(null); // No real Firebase auth session
+              setFirebaseUser(null);
               return localUser;
             }
         }
         
         console.error("Login failed:", firebaseError);
-        throw firebaseError; // Re-throw original Firebase error if local user not found
+        throw firebaseError;
     }
   };
-
 
   const logout = async () => {
     if (isAdminSession) {
       setIsAdminSession(false);
     }
-    await signOut(auth).catch(() => {}); // Sign out real user if any
+    await signOut(auth).catch(() => {});
     setCurrentUser(null);
     setFirebaseUser(null);
   };
@@ -188,7 +181,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
         
-        // For Firebase Auth users, we DO NOT store the password in Firestore.
         const newUserProfileData = {
            name,
            email,
@@ -216,11 +208,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(finalUser);
         setAllUsers(prev => [...prev, finalUser]);
         
-        // This is a new user, so their session is not an admin session.
         setIsAdminSession(false);
 
     } catch (error) {
-        // Re-throw the error so it can be caught in the UI component
         console.error("Error during signup: ", error);
         throw error;
     }
@@ -238,7 +228,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
-        // We are creating a local user, so we store the password.
         const newUserProfileData = {
           ...userData,
           isVerified: false,
@@ -255,7 +244,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const finalUser = { 
             id: docRef.id, 
             ...newUserProfileData,
-            createdAt: new Date() // Use local date for immediate feedback
+            createdAt: new Date()
         };
 
         setAllUsers(prevUsers => [...prevUsers, finalUser as UserProfile]);
@@ -299,6 +288,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
-    

@@ -45,7 +45,7 @@ export function NumberGrid({
           const isSold = soldTickets.includes(number);
           const isReserved = !isSold && reservedTickets.includes(number);
           const isSelected = selectedNumbers.includes(number);
-          const formattedNumber = number.toString().padStart(3, '0');
+          const formattedNumber = number.toString().padStart(Math.max(3, String(totalTickets).length), '0');
 
           const isDisabled = isSold || isReserved;
 
