@@ -16,13 +16,14 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { BackgroundMusicPlayer } from "./background-music-player";
 import { Skeleton } from "./ui/skeleton";
 
 export function SiteHeader() {
   const { isAuthenticated, user, logout, loading } = useAuth();
   const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -30,6 +31,11 @@ export function SiteHeader() {
   };
   
   const homeLink = user?.role === 'admin' ? '/admin' : '/';
+
+  const handleAdminClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    router.push('/admin');
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
@@ -49,16 +55,18 @@ export function SiteHeader() {
             ) : (
               <>
                 {isAuthenticated && user ? (
-                  <DropdownMenu>
+                   <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </Button>
+                       <Link href={user.role === 'admin' ? "/admin" : "/profile"} onClick={user.role === 'admin' ? handleAdminClick : undefined}>
+                        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </Link>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuContent className="w-56" align="end" forceMount onPointerEnter={() => setIsMenuOpen(true)} onPointerLeave={() => setIsMenuOpen(false)}>
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                           <p className="text-sm font-medium leading-none">{user.name}</p>
@@ -75,6 +83,12 @@ export function SiteHeader() {
                         <DropdownMenuItem onClick={() => router.push('/raffles/create')}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Crear Rifa
+                        </DropdownMenuItem>
+                      )}
+                      {user.role === 'admin' && (
+                         <DropdownMenuItem onClick={() => router.push('/admin')}>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Panel Admin
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
