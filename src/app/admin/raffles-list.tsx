@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Users, Trophy, Pencil, Trash2, Search, Filter, ArrowDownUp } from "lucide-react";
+import { MoreHorizontal, Users, Trophy, Pencil, Trash2, Search, Filter, PlusCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -171,6 +171,10 @@ export function RafflesList() {
                     </CardDescription>
                 </div>
                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button onClick={() => router.push('/raffles/create')}>
+                        <PlusCircle className="mr-2" />
+                        Crear Nueva Rifa
+                    </Button>
                     <div className="relative flex-grow sm:flex-grow-0">
                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
@@ -311,3 +315,5 @@ export function RafflesList() {
     </>
   );
 }
+
+    

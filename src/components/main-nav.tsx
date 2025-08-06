@@ -22,6 +22,7 @@ export function MainNav() {
   }, []);
   
   const isAdmin = user?.role === 'admin';
+  const canCreate = user?.role === 'creator' || user?.role === 'admin';
 
   if (!isClient) {
     return null;
@@ -72,18 +73,16 @@ export function MainNav() {
         </Link>
       )}
 
-      {user?.role === 'creator' && (
-         <>
-          <Button variant="ghost" asChild>
+      {canCreate && (
+         <Button variant="ghost" asChild>
             <Link href="/raffles/create">
               <PlusCircle className="mr-2 h-4 w-4" />
               Crear Rifa
             </Link>
           </Button>
-         </>
       )}
       
-      {user && (
+      {user && user.role !== 'admin' && (
         <Link
             href="/profile"
             className="transition-colors hover:text-primary text-muted-foreground"
@@ -94,3 +93,5 @@ export function MainNav() {
     </nav>
   );
 }
+
+    

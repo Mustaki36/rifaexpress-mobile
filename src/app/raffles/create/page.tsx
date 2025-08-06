@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -79,11 +80,11 @@ export default function CreateRafflePage() {
     );
   }
   
-  if (user.role !== 'creator') {
+  if (user.role !== 'creator' && user.role !== 'admin') {
      return (
         <div className="container text-center py-20">
             <h1 className="text-2xl font-bold mb-4">Función no disponible</h1>
-            <p className="text-muted-foreground mb-6">Necesitas una cuenta de "Creador de Rifas" para acceder a esta página.</p>
+            <p className="text-muted-foreground mb-6">Necesitas una cuenta de "Creador de Rifas" o ser Administrador para acceder a esta página.</p>
             <Button asChild>
                 <Link href="/profile">Volver a mi perfil</Link>
             </Button>
@@ -144,7 +145,7 @@ export default function CreateRafflePage() {
           description: `La rifa "${values.title}" ha sido creada exitosamente.`,
         });
         form.reset();
-        router.push('/profile');
+        router.push(user.role === 'admin' ? '/admin' : '/profile');
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "No se pudo crear la rifa.";
         toast({ variant: "destructive", title: "Error", description: errorMessage });
@@ -291,3 +292,5 @@ export default function CreateRafflePage() {
     </div>
   );
 }
+
+    

@@ -69,13 +69,11 @@ export function SiteHeader() {
                       <DropdownMenuItem onClick={() => router.push('/profile')}>
                         Mi Perfil
                       </DropdownMenuItem>
-                       {user.role === 'creator' && (
-                        <>
-                          <DropdownMenuItem onClick={() => router.push('/raffles/create')}>
-                              <PlusCircle className="mr-2 h-4 w-4" />
-                              Crear Rifa
-                          </DropdownMenuItem>
-                        </>
+                       {(user.role === 'creator' || user.role === 'admin') && (
+                        <DropdownMenuItem onClick={() => router.push('/raffles/create')}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Crear Rifa
+                        </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="text-destructive">
@@ -102,3 +100,5 @@ export function SiteHeader() {
     </header>
   );
 }
+
+    
