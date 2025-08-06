@@ -183,12 +183,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
            tickets: [],
            mustChangePassword: false,
            createdAt: serverTimestamp(),
-           // DO NOT store the password in Firestore for real users.
-           // The password property is only for mock/admin-created users.
+           // DO NOT store the password in Firestore for real users signed up via Firebase Auth.
         };
     
         const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, newUserProfileData);
+        
+        const finalUser = {
+            id: user.uid,
+            ...newUserProfileData,
+            createdAt: new Date(),
+        } as UserProfile;
+        
+        setCurrentUser(finalUser);
+        setAllUsers(prev => [...prev, finalUser]);
         
         // This is a new user, so their session is not an admin session.
         setIsAdminSession(false);
