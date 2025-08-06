@@ -36,14 +36,15 @@ export default function RafflePage() {
   const [isPurchasing, setIsPurchasing] = useState(false);
 
   const { toast } = useToast();
-
+  
   const isRaffleSoldOut = useMemo(() => {
     if (!raffle) return false;
     return raffle.soldTickets.length >= raffle.totalTickets;
   }, [raffle]);
 
   useEffect(() => {
-    if (raffle && isRaffleSoldOut && !lotteryInfo) {
+    // Only fetch lottery info if the raffle is sold out and we don't have the info yet.
+    if (raffle && isRaffleSoldOut && !lotteryInfo && !isLoadingLottery) {
       const fetchLotteryInfo = async () => {
         setIsLoadingLottery(true);
         try {
@@ -62,23 +63,24 @@ export default function RafflePage() {
       };
       fetchLotteryInfo();
     }
-  }, [isRaffleSoldOut, raffle, lotteryInfo, toast]);
+  }, [isRaffleSoldOut, raffle, lotteryInfo, toast, isLoadingLottery]);
 
 
   const otherUsersReservedTickets = useMemo(() => {
+    const now = new Date();
     return reservedTickets
-      .filter(t => t.raffleId === raffleId && t.userId !== user?.id)
+      .filter(t => t.raffleId === raffleId && t.userId !== user?.id && t.expiresAt > now)
       .map(t => t.number);
   }, [reservedTickets, raffleId, user?.id]);
 
   // When the component unmounts (user navigates away), release their reservations
   useEffect(() => {
     return () => {
-      if (user?.id && raffleId) {
+      if (user?.id && raffleId && selectedNumbers.length > 0) {
         releaseTicketsForUser(user.id, raffleId);
       }
     };
-  }, [user?.id, raffleId, releaseTicketsForUser]);
+  }, [user?.id, raffleId, releaseTicketsForUser, selectedNumbers]);
 
   if (!raffle) {
     return (
@@ -90,18 +92,16 @@ export default function RafflePage() {
   }
 
   const handleNumberSelect = (number: number) => {
-    if (!isAuthenticated || !user) {
-      setIsAuthDialogOpen(true);
-      return;
-    }
-    
+    // Guest users can select numbers which reserves them temporarily
+    const currentUserId = user?.id || 'guest';
+
     if (selectedNumbers.includes(number)) {
       // User is de-selecting a number
-      releaseTicket(raffle.id, number, user.id);
+      releaseTicket(raffle.id, number, currentUserId);
       setSelectedNumbers((prev) => prev.filter((n) => n !== number));
     } else {
       // User is selecting a number, try to reserve it
-      const success = reserveTicket(raffle.id, number, user.id);
+      const success = reserveTicket(raffle.id, number, currentUserId);
       if (success) {
         setSelectedNumbers((prev) => [...prev, number]);
       } else {
@@ -115,17 +115,17 @@ export default function RafflePage() {
   };
   
   const handlePurchase = async () => {
+    if (!isAuthenticated || !user) {
+      setIsAuthDialogOpen(true);
+      return;
+    }
+
     if (selectedNumbers.length === 0) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Debes seleccionar al menos un boleto.",
       });
-      return;
-    }
-
-    if (!isAuthenticated || !user) {
-      setIsAuthDialogOpen(true);
       return;
     }
     
@@ -219,7 +219,7 @@ export default function RafflePage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {isLoadingLottery && <p>Obteniendo información del sorteo...</p>}
+                        {isLoadingLottery && <div className="flex items-center justify-center p-4"><Loader2 className="animate-spin mr-2"/> Obteniendo información del sorteo...</div>}
                         {lotteryInfo && (
                             <>
                                 <CountdownTimer targetDate={lotteryInfo.nextDrawDate} />
@@ -301,7 +301,3 @@ export default function RafflePage() {
     </Template>
   );
 }
-
-
-
-    
