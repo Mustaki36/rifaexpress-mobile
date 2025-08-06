@@ -34,22 +34,22 @@ export default function RootLayout({
         )}
       >
         <TransitionProvider>
-          <RaffleProvider>
-              <ResultsProvider>
-                <SettingsProvider>
-                  <BlockProvider>
-                    <AuthProvider>
-                      <div className="relative flex min-h-screen flex-col">
+          <SettingsProvider>
+            <BlockProvider>
+              <AuthProvider>
+                <RaffleProvider>
+                  <ResultsProvider>
+                    <div className="relative flex min-h-screen flex-col">
                       <SiteHeader />
                       <main className="flex-1">{children}</main>
                       <SiteFooter />
-                      </div>
-                      <Toaster />
-                    </AuthProvider>
-                  </BlockProvider>
-                </SettingsProvider>
-              </ResultsProvider>
-          </RaffleProvider>
+                    </div>
+                    <Toaster />
+                  </ResultsProvider>
+                </RaffleProvider>
+              </AuthProvider>
+            </BlockProvider>
+          </SettingsProvider>
         </TransitionProvider>
       </body>
     </html>

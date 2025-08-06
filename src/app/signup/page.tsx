@@ -89,42 +89,36 @@ export default function SignupPage() {
     },
   });
   
-    const emailValue = form.watch("email");
+  const emailValue = form.watch("email");
 
   useEffect(() => {
-    if (!isVerificationEnabled || !isClient) return;
+    if (!isClient || !isVerificationEnabled) return;
 
+    let stream: MediaStream | null = null;
+    
     const getCameraPermission = async () => {
-      if (typeof window !== 'undefined' && navigator.mediaDevices) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-          setHasCameraPermission(true);
-        } catch (error) {
-          console.error('Error accessing camera:', error);
-          setHasCameraPermission(false);
-          toast({
-            variant: "destructive",
-            title: "Acceso a la cámara denegado",
-            description: "Por favor, habilita los permisos de la cámara en tu navegador.",
-          });
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                }
+                setHasCameraPermission(true);
+            } catch (err) {
+                console.error("Camera access denied:", err);
+                setHasCameraPermission(false);
+            }
+        } else {
+            setHasCameraPermission(false);
         }
-      } else {
-        setHasCameraPermission(false);
-      }
     };
-
+    
     getCameraPermission();
-
+    
     return () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            const stream = videoRef.current.srcObject as MediaStream;
-            stream.getTracks().forEach(track => track.stop());
-        }
-    }
-  }, [toast, isVerificationEnabled, isClient]);
+        stream?.getTracks().forEach(track => track.stop());
+    };
+  }, [isClient, isVerificationEnabled]);
   
   const handleCaptureUserImage = () => {
     if (videoRef.current) {
@@ -166,7 +160,7 @@ export default function SignupPage() {
         };
         const result = await verifyIdentity(input);
 
-        if (result.isVerified && result.isOfAge) {
+        if (result.isVerified) {
             setIdVerificationStatus('success');
             toast({ title: "¡Verificación exitosa!", description: "Tu identidad ha sido confirmada." });
         } else {

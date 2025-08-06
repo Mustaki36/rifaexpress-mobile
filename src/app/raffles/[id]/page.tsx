@@ -17,12 +17,9 @@ import { getLotteryInfo, GetLotteryInfoOutput } from "@/ai/flows/get-lottery-inf
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Template from "@/components/template";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 export default function RafflePage() {
   const params = useParams();
-  const router = useRouter();
   const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser } = useRaffles();
   const { user, isAuthenticated } = useAuth();
   const raffleId = params.id as string;
@@ -67,12 +64,14 @@ export default function RafflePage() {
   const otherUsersReservedTickets = useMemo(() => {
     const now = new Date();
     return reservedTickets
-      .filter(t => t.raffleId === raffleId && t.userId !== user?.id && t.expiresAt > now)
+      .filter(t => t.raffleId === raffleId && t.userId !== user?.id && t.expiresAt.getTime() > now.getTime())
       .map(t => t.number);
   }, [reservedTickets, raffleId, user?.id]);
 
   useEffect(() => {
+    // This is a cleanup function that runs when the component unmounts
     return () => {
+      // If the user has selected numbers but hasn't purchased them, release them
       if (user?.id && raffleId && selectedNumbers.length > 0) {
         releaseTicketsForUser(user.id, raffleId);
       }
@@ -89,13 +88,16 @@ export default function RafflePage() {
   }
 
   const handleNumberSelect = (number: number) => {
-    const currentUserId = user?.id || 'guest';
+    if (!isAuthenticated || !user) {
+        setIsAuthDialogOpen(true);
+        return;
+    }
 
     if (selectedNumbers.includes(number)) {
-      releaseTicket(raffle.id, number, currentUserId);
+      releaseTicket(raffle.id, number, user.id);
       setSelectedNumbers((prev) => prev.filter((n) => n !== number));
     } else {
-      const success = reserveTicket(raffle.id, number, currentUserId);
+      const success = reserveTicket(raffle.id, number, user.id);
       if (success) {
         setSelectedNumbers((prev) => [...prev, number]);
       } else {
@@ -126,31 +128,6 @@ export default function RafflePage() {
     setIsPurchasing(true);
     try {
         await purchaseTickets(raffle.id, selectedNumbers, user.id);
-
-        if (user.id !== 'admin-user-id') {
-            const userDocRef = doc(db, "users", user.id);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                const newTicketRecord = {
-                    raffleId: raffle.id,
-                    raffleTitle: raffle.title,
-                    ticketNumbers: selectedNumbers,
-                };
-
-                const existingRaffleIndex = userData.tickets.findIndex((t: any) => t.raffleId === raffle.id);
-                let updatedTickets = [...userData.tickets];
-
-                if (existingRaffleIndex > -1) {
-                    const existingRecord = updatedTickets[existingRaffleIndex];
-                    const combinedNumbers = [...new Set([...existingRecord.ticketNumbers, ...selectedNumbers])].sort((a,b) => a-b);
-                    updatedTickets[existingRaffleIndex] = { ...existingRecord, ticketNumbers: combinedNumbers };
-                } else {
-                    updatedTickets.push(newTicketRecord);
-                }
-                await updateDoc(userDocRef, { tickets: updatedTickets });
-            }
-        }
         
         toast({
             title: "¡Compra exitosa!",
@@ -193,7 +170,7 @@ export default function RafflePage() {
               <Tag className="h-4 w-4 text-primary"/> <span>Premio: <strong>{raffle.prize}</strong></span>
             </div>
             <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{raffle.drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
+              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{new Date(raffle.drawDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               {raffle.description}

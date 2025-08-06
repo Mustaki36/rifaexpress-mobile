@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const querySnapshot = await getDocs(collection(db, "users"));
         const usersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
+            // Firestore timestamps need to be converted to JS Date objects
             const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
             return { 
                 id: doc.id, 
@@ -119,12 +120,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         setIsAdminSession(false);
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        // The onAuthStateChanged listener will handle setting the current user
         const userDocRef = doc(db, "users", userCredential.user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
              const userData = userDocSnap.data();
-             const userProfile = { id: userCredential.user.uid, ...userData } as UserProfile;
+             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
+             const userProfile = { 
+                 id: userCredential.user.uid, 
+                 ...userData,
+                 createdAt: createdAt
+             } as UserProfile;
+             setCurrentUser(userProfile);
              return userProfile;
         }
         return null;
@@ -136,13 +142,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!querySnapshot.empty) {
             const userDoc = querySnapshot.docs[0];
             const userData = userDoc.data();
-            const localUser = { id: userDoc.id, ...userData } as UserProfile;
-            if (localUser) {
-              setIsAdminSession(false); // It's not an admin session, but a non-firebase auth session
-              setCurrentUser(localUser);
-              setFirebaseUser(null);
-              return localUser;
-            }
+             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
+            const localUser = { 
+                id: userDoc.id, 
+                ...userData,
+                createdAt: createdAt
+            } as UserProfile;
+            
+            setIsAdminSession(false); // It's not an admin session, but a non-firebase auth session
+            setCurrentUser(localUser);
+            setFirebaseUser(null);
+            return localUser;
         }
 
         console.error("Login failed:", firebaseError);
@@ -154,8 +164,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (isAdminSession) {
       setIsAdminSession(false);
     }
-    await signOut(auth).catch(() => {});
-    setCurrentUser(null);
+    await signOut(auth).catch(() => {}); // Sign out from firebase
+    setCurrentUser(null); // Clear local user state for both admin and firebase users
     setFirebaseUser(null);
   };
   
@@ -182,13 +192,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
     
         const userDocRef = doc(db, "users", user.uid);
-        // Set the Firestore document with all the user's profile information
         await setDoc(userDocRef, {
             ...newUserProfileData,
             createdAt: serverTimestamp(),
         });
         
-        // The onAuthStateChanged listener will automatically set the current user.
         await fetchAllUsers();
 
     } catch (error) {
@@ -224,13 +232,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp()
         });
         
-        const finalUser: UserProfile = { 
-            id: docRef.id, 
-            ...newUserProfileData,
-            createdAt: new Date()
-        };
-
-        setAllUsers(prevUsers => [...prevUsers, finalUser]);
+        // After adding, fetch all users again to update the list in UI
+        await fetchAllUsers();
 
     } catch (error) {
         console.error("Error al crear usuario en Firestore:", error);
@@ -242,10 +245,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDocRef = doc(db, "users", userId);
     await updateDoc(userDocRef, userData);
     
-    // Fetch all users again to ensure UI consistency
     await fetchAllUsers();
 
-    // Update current user if it's the one being edited
     if (currentUser?.id === userId) {
         setCurrentUser(prev => prev ? { ...prev, ...userData } as UserProfile : null);
     }
@@ -259,7 +260,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteUser = async (userId: string) => {
     await deleteDoc(doc(db, "users", userId));
-    // Refresh the user list
     await fetchAllUsers();
   }
 
