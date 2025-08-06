@@ -39,6 +39,7 @@ export function SiteHeader() {
   const homeLink = user?.role === 'admin' ? '/admin' : '/';
 
   const handleAdminClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
     router.push('/admin');
   }
 
@@ -56,7 +57,7 @@ export function SiteHeader() {
           <nav className="flex items-center space-x-2">
             <BackgroundMusicPlayer />
             {loading || !isClient ? (
-                <Skeleton className="h-10 w-24 rounded-md" />
+                <Skeleton className="h-10 w-36 rounded-md" />
             ) : (
               <>
                 {isAuthenticated && user ? (
