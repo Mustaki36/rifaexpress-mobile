@@ -140,14 +140,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     } catch (firebaseError) {
         // Fallback for admin-created users without a Firebase Auth account
-        const localUser = allUsers.find(u => u.email === email && u.password === pass);
-        if (localUser) {
-            setCurrentUser(localUser);
-            // We don't set a firebaseUser object because this is not a real Firebase auth session
-            setFirebaseUser(null);
-            setIsAdminSession(false); 
-            return localUser;
+        const q = query(collection(db, "users"), where("email", "==", email), where("password", "==", pass));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            const localUser = { 
+                id: userDoc.id, 
+                ...userDoc.data(),
+                createdAt: userDoc.data().createdAt.toDate()
+            } as UserProfile;
+
+            if (localUser) {
+              setCurrentUser(localUser);
+              setFirebaseUser(null); // No real Firebase auth session
+              return localUser;
+            }
         }
+        
         console.error("Login failed:", firebaseError);
         throw firebaseError; // Re-throw original Firebase error if local user not found
     }
@@ -172,6 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
         
+        // For Firebase Auth users, we DO NOT store the password in Firestore.
         const newUserProfileData = {
            name,
            email,
@@ -182,12 +193,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
            avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
            tickets: [],
            mustChangePassword: false,
-           createdAt: serverTimestamp(),
-           // DO NOT store the password in Firestore for real users signed up via Firebase Auth.
         };
     
         const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, newUserProfileData);
+        await setDoc(userDocRef, {
+            ...newUserProfileData,
+            createdAt: serverTimestamp(),
+        });
         
         const finalUser = {
             id: user.uid,
@@ -281,3 +293,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
