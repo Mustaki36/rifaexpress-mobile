@@ -21,7 +21,7 @@ import { BackgroundMusicPlayer } from "./background-music-player";
 import { Skeleton } from "./ui/skeleton";
 
 export function SiteHeader() {
-  const { isAuthenticated, user, logout, loading } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -29,7 +29,6 @@ export function SiteHeader() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
 
   const handleLogout = async () => {
     await logout();
@@ -56,7 +55,7 @@ export function SiteHeader() {
           <MainNav />
           <nav className="flex items-center space-x-2">
             <BackgroundMusicPlayer />
-            {loading || !isClient ? (
+            {!isClient ? (
                 <Skeleton className="h-10 w-36 rounded-md" />
             ) : (
               <>
