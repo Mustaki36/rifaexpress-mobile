@@ -60,7 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // If we have an active admin session, don't let onAuthStateChanged override it
       if (isAdminSession) {
           setLoading(false);
           return;
@@ -72,20 +71,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          setCurrentUser({ 
+          const userProfile = { 
               id: user.uid, 
               ...userData,
               createdAt: userData.createdAt?.toDate()
-          } as UserProfile);
+          } as UserProfile;
+          setCurrentUser(userProfile);
+          // Also update the allUsers state if this user is somehow not there
+           setAllUsers(prev => {
+                const userExists = prev.some(u => u.id === user.uid);
+                if (!userExists) {
+                    return [...prev, userProfile];
+                }
+                return prev.map(u => u.id === user.uid ? userProfile : u);
+           });
         } else {
-           // This case can happen if a user is in Firebase Auth but not in Firestore DB
-           // Or during the brief moment of user creation.
-           const localUser = allUsers.find(u => u.id === user.uid);
-           if(localUser) {
-               setCurrentUser(localUser);
-           } else {
-               setCurrentUser(null);
-           }
+           setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);
@@ -96,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchAllUsers();
     
     return () => unsubscribe();
-  }, [fetchAllUsers, isAdminSession, allUsers]);
+  }, [fetchAllUsers, isAdminSession]);
 
   const isEmailBlocked = (email: string) => {
     return blockedUsers.some(u => u.email === email);
@@ -107,14 +108,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado.");
     }
     
+    // Prioritize admin login check
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
       setCurrentUser(MOCK_ADMIN_USER);
       setFirebaseUser(null); 
-      setIsAdminSession(true); // Set the flag for admin session
+      setIsAdminSession(true);
       return MOCK_ADMIN_USER;
     }
     
-    setIsAdminSession(false); // Reset admin flag on regular login attempt
+    setIsAdminSession(false); 
+    
+    // Then, try Firebase Auth
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
         const userDocRef = doc(db, "users", userCredential.user.uid);
@@ -130,28 +134,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(userProfile);
             return userProfile;
         } else {
-             // Fallback for admin-created users
-            const localUser = allUsers.find(u => u.email === email && u.password === pass);
-             if (localUser) {
-                setCurrentUser(localUser);
-                setFirebaseUser({ uid: localUser.id, email: localUser.email } as FirebaseUser);
-                return localUser;
-            }
              throw new Error("User profile not found in Firestore.");
         }
-    } catch (error) {
-        // Fallback for admin-created users not in Firebase Auth
+    } catch (firebaseError) {
+        // If Firebase auth fails, try to find a locally managed user (admin-created)
         const localUser = allUsers.find(u => u.email === email && u.password === pass);
         if (localUser) {
             setCurrentUser(localUser);
             // Simulate a firebaseUser object for consistency. It won't have all methods.
             setFirebaseUser({ uid: localUser.id, email: localUser.email } as FirebaseUser);
+            setIsAdminSession(false); // It's a local user, not the special admin
             return localUser;
         }
-        console.error("Firebase Auth login failed:", error);
+        console.error("Login failed:", firebaseError);
         throw new Error("auth/invalid-credential");
     }
   };
+
 
   const logout = async () => {
     if (isAdminSession) {
@@ -162,11 +161,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setFirebaseUser(null);
   };
   
-  const signup = async (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
+  const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
     if (isEmailBlocked(email)) {
       throw new Error("Este email ha sido bloqueado.");
     }
 
+    // This will throw an error if the user already exists in Firebase Auth, which is handled by the caller.
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
     
@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        role,
        avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
        tickets: [],
-       password: pass, 
+       password: pass, // Storing password for admin-created user compatibility
        mustChangePassword: false,
     };
 
@@ -188,17 +188,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ...newUserProfile,
         createdAt: serverTimestamp(),
     });
-    
+
+    // After setting the doc, we immediately fetch it to get the server-generated timestamp
     const newUserDoc = await getDoc(userDocRef);
     const newUserData = newUserDoc.data();
-    const createdUser = {
-        id: newUserDoc.id,
-        ...newUserData,
-        createdAt: newUserData?.createdAt.toDate(),
-    } as UserProfile;
-
-    setAllUsers(prev => [...prev, createdUser]);
-    setCurrentUser(createdUser);
+    if(newUserData) {
+        const createdUser: UserProfile = {
+            id: newUserDoc.id,
+            ...newUserData,
+            createdAt: newUserData.createdAt.toDate(),
+        } as UserProfile;
+        
+        // Update states
+        setAllUsers(prev => [...prev, createdUser]);
+        setCurrentUser(createdUser);
+    } else {
+        throw new Error("Failed to create user profile in database.");
+    }
+    
     setIsAdminSession(false);
   };
 
@@ -244,10 +251,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDocRef = doc(db, "users", userId);
     await updateDoc(userDocRef, userData);
     
-    setAllUsers(prevUsers => prevUsers.map(user => user.id === userId ? { ...user, ...userData } : user));
+    setAllUsers(prevUsers => prevUsers.map(user => user.id === userId ? { ...user, ...userData } as UserProfile : user));
 
     if (currentUser?.id === userId) {
-        setCurrentUser(prev => prev ? { ...prev, ...userData } : null);
+        setCurrentUser(prev => prev ? { ...prev, ...userData } as UserProfile : null);
     }
   };
 
