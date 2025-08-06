@@ -19,11 +19,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Template from "@/components/template";
+import { RaffleCardSkeleton } from "@/components/raffle-card-skeleton";
 
 type SortOption = "recent" | "oldest" | "price_asc" | "price_desc";
 
 export default function Home() {
-  const { raffles } = useRaffles();
+  const { raffles, loading } = useRaffles();
   const { allUsers } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("recent");
@@ -104,9 +105,13 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredAndSortedRaffles.map((raffle) => (
-            <RaffleCard key={raffle.id} raffle={raffle} />
-          ))}
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => <RaffleCardSkeleton key={index} />)
+          ) : (
+            filteredAndSortedRaffles.map((raffle) => (
+              <RaffleCard key={raffle.id} raffle={raffle} />
+            ))
+          )}
         </div>
       </div>
     </Template>
