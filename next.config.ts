@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -22,6 +23,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'assets.nintendo.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'files.catbox.moe',
         port: '',
         pathname: '/**',
       }
