@@ -149,9 +149,10 @@ export default function CreateRafflePage() {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "No se pudo crear la rifa.";
         toast({ variant: "destructive", title: "Error", description: errorMessage });
-    } finally {
-        setIsSubmitting(false);
-    }
+        setIsSubmitting(false); // Make sure to stop loading on error
+    } 
+    // We don't call setIsSubmitting(false) in a finally block if navigation is successful,
+    // because the component will unmount.
   }
 
   return (
@@ -292,5 +293,3 @@ export default function CreateRafflePage() {
     </div>
   );
 }
-
-    
