@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BackgroundMusicPlayer } from "./background-music-player";
 import { Skeleton } from "./ui/skeleton";
 
@@ -24,6 +24,12 @@ export function SiteHeader() {
   const { isAuthenticated, user, logout, loading } = useAuth();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   const handleLogout = async () => {
     await logout();
@@ -49,8 +55,8 @@ export function SiteHeader() {
           <MainNav />
           <nav className="flex items-center space-x-2">
             <BackgroundMusicPlayer />
-            {loading ? (
-                <Skeleton className="h-8 w-24 rounded-md" />
+            {loading || !isClient ? (
+                <Skeleton className="h-10 w-24 rounded-md" />
             ) : (
               <>
                 {isAuthenticated && user ? (
