@@ -190,9 +190,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, newUserProfileData);
         
+        // This is a new user, so their session is not an admin session.
         setIsAdminSession(false);
+
     } catch (error) {
         // Re-throw the error so it can be caught in the UI component
+        console.error("Error during signup: ", error);
         throw error;
     }
   };
@@ -209,6 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
+        // We are creating a local user, so we store the password.
         const newUserProfileData = {
           ...userData,
           isVerified: false,
