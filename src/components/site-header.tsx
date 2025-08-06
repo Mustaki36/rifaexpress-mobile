@@ -55,64 +55,58 @@ export function SiteHeader() {
           <MainNav />
           <nav className="flex items-center space-x-2">
             <BackgroundMusicPlayer />
-            {!isClient ? (
-                <Skeleton className="h-10 w-36 rounded-md" />
+            {isClient && isAuthenticated && user ? (
+               <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                <DropdownMenuTrigger asChild>
+                   <Button variant="ghost" className="relative h-auto w-auto p-0 rounded-full" onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
+                       <Link href={user.role === 'admin' ? "/admin" : "/profile"} onClick={user.role === 'admin' ? handleAdminClick : undefined}>
+                           <Avatar className={user.role === 'admin' ? "h-16 w-16" : "h-9 w-9"}>
+                            <AvatarImage src={user.avatar} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                       </Link>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {user.role !== 'admin' && (
+                    <DropdownMenuItem onClick={() => router.push('/profile')}>
+                      Mi Perfil
+                    </DropdownMenuItem>
+                  )}
+                   {(user.role === 'creator' || user.role === 'admin') && (
+                    <DropdownMenuItem onClick={() => router.push('/raffles/create')}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Crear Rifa
+                    </DropdownMenuItem>
+                  )}
+                  {user.role === 'admin' && (
+                     <DropdownMenuItem onClick={() => router.push('/admin')}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Panel Admin
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Cerrar Sesión</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <>
-                {isAuthenticated && user ? (
-                   <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-                    <DropdownMenuTrigger asChild>
-                       <Button variant="ghost" className="relative h-auto w-auto p-0 rounded-full" onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
-                           <Link href={user.role === 'admin' ? "/admin" : "/profile"} onClick={user.role === 'admin' ? handleAdminClick : undefined}>
-                               <Avatar className={user.role === 'admin' ? "h-16 w-16" : "h-9 w-9"}>
-                                <AvatarImage src={user.avatar} alt={user.name} />
-                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                           </Link>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56" align="end" forceMount onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
-                      <DropdownMenuLabel className="font-normal">
-                        <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium leading-none">{user.name}</p>
-                          <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                        </div>
-                      </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {user.role !== 'admin' && (
-                        <DropdownMenuItem onClick={() => router.push('/profile')}>
-                          Mi Perfil
-                        </DropdownMenuItem>
-                      )}
-                       {(user.role === 'creator' || user.role === 'admin') && (
-                        <DropdownMenuItem onClick={() => router.push('/raffles/create')}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Crear Rifa
-                        </DropdownMenuItem>
-                      )}
-                      {user.role === 'admin' && (
-                         <DropdownMenuItem onClick={() => router.push('/admin')}>
-                            <Shield className="mr-2 h-4 w-4" />
-                            Panel Admin
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Cerrar Sesión</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <>
-                    <Button variant="ghost" asChild>
-                      <Link href="/login">Iniciar Sesión</Link>
-                    </Button>
-                    <Button asChild className="hidden sm:inline-flex">
-                      <Link href="/signup">Registrarse</Link>
-                    </Button>
-                  </>
-                )}
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Iniciar Sesión</Link>
+                </Button>
+                <Button asChild className="hidden sm:inline-flex">
+                  <Link href="/signup">Registrarse</Link>
+                </Button>
               </>
             )}
           </nav>
