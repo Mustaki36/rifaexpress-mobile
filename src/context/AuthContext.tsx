@@ -188,10 +188,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
         const userDocRef = doc(db, "users", user.uid);
         await setDoc(userDocRef, newUserProfileData);
-    
-        // We don't need to fetch immediately anymore. 
-        // The onAuthStateChanged listener will pick up the new user and fetch their profile.
-        // This simplifies the logic and reduces redundant fetches.
         
         setIsAdminSession(false);
     } catch (error) {
