@@ -185,7 +185,9 @@ export default function SignupPage() {
 
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (isVerificationEnabled && idVerificationStatus !== 'success') {
+    const isVerified = idVerificationStatus === 'success';
+
+    if (isVerificationEnabled && !isVerified) {
       toast({
         variant: "destructive",
         title: "Verificación de ID requerida",
@@ -196,9 +198,9 @@ export default function SignupPage() {
     
     setIsSubmitting(true);
     try {
-      const { street, city, state, postalCode, country, ...restOfValues } = values;
+      const { street, city, state, postalCode, country, confirmPassword, isOfAge, ...restOfValues } = values;
       const address = { street, city, state, postalCode, country };
-      await signup(restOfValues.name, restOfValues.email, restOfValues.password, restOfValues.phone, address, isVerificationEnabled, restOfValues.role);
+      await signup(restOfValues.name, restOfValues.email, restOfValues.password, restOfValues.phone, address, isVerified, restOfValues.role);
       toast({
         title: "¡Cuenta Creada!",
         description: "Tu cuenta ha sido creada exitosamente. ¡Bienvenido!",
@@ -560,5 +562,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    

@@ -134,20 +134,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(userProfile);
             return userProfile;
         } else {
+             // This case is unlikely if signup is working correctly, but good to have
+             await signOut(auth);
              throw new Error("User profile not found in Firestore.");
         }
     } catch (firebaseError) {
-        // If Firebase auth fails, try to find a locally managed user (admin-created)
+        // Fallback for admin-created users without a Firebase Auth account
         const localUser = allUsers.find(u => u.email === email && u.password === pass);
         if (localUser) {
             setCurrentUser(localUser);
-            // Simulate a firebaseUser object for consistency. It won't have all methods.
-            setFirebaseUser({ uid: localUser.id, email: localUser.email } as FirebaseUser);
-            setIsAdminSession(false); // It's a local user, not the special admin
+            // We don't set a firebaseUser object because this is not a real Firebase auth session
+            setFirebaseUser(null);
+            setIsAdminSession(false); 
             return localUser;
         }
         console.error("Login failed:", firebaseError);
-        throw firebaseError;
+        throw firebaseError; // Re-throw original Firebase error if local user not found
     }
   };
 
@@ -170,7 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
         
-        const newUserProfile: Omit<UserProfile, 'id' | 'createdAt'> = {
+        const newUserProfileData = {
            name,
            email,
            phone,
@@ -181,30 +183,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
            tickets: [],
            password: pass, // Storing password for admin-created user compatibility
            mustChangePassword: false,
+           createdAt: serverTimestamp(),
         };
     
         const userDocRef = doc(db, "users", user.uid);
-        await setDoc(userDocRef, {
-            ...newUserProfile,
-            createdAt: serverTimestamp(),
-        });
+        await setDoc(userDocRef, newUserProfileData);
     
-        // After setting the doc, we immediately fetch it to get the server-generated timestamp
-        const newUserDoc = await getDoc(userDocRef);
-        const newUserData = newUserDoc.data();
-        if(newUserData) {
-            const createdUser: UserProfile = {
-                id: newUserDoc.id,
-                ...newUserData,
-                createdAt: newUserData.createdAt.toDate(),
-            } as UserProfile;
-            
-            // Update states
-            setAllUsers(prev => [...prev, createdUser]);
-            setCurrentUser(createdUser);
-        } else {
-            throw new Error("Failed to create user profile in database.");
-        }
+        // We don't need to fetch immediately anymore. 
+        // The onAuthStateChanged listener will pick up the new user and fetch their profile.
+        // This simplifies the logic and reduces redundant fetches.
         
         setIsAdminSession(false);
     } catch (error) {
@@ -285,5 +272,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
