@@ -48,7 +48,7 @@ export function SiteHeader() {
                 <Skeleton className="h-8 w-24 rounded-md" />
             ) : (
               <>
-                {isAuthenticated && user && user.role !== 'admin' ? (
+                {isAuthenticated && user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -66,9 +66,11 @@ export function SiteHeader() {
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => router.push('/profile')}>
-                        Mi Perfil
-                      </DropdownMenuItem>
+                      {user.role !== 'admin' && (
+                        <DropdownMenuItem onClick={() => router.push('/profile')}>
+                          Mi Perfil
+                        </DropdownMenuItem>
+                      )}
                        {(user.role === 'creator' || user.role === 'admin') && (
                         <DropdownMenuItem onClick={() => router.push('/raffles/create')}>
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -82,7 +84,7 @@ export function SiteHeader() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                ) : !user ? (
+                ) : (
                   <>
                     <Button variant="ghost" asChild>
                       <Link href="/login">Iniciar Sesión</Link>
@@ -91,7 +93,7 @@ export function SiteHeader() {
                       <Link href="/signup">Registrarse</Link>
                     </Button>
                   </>
-                ) : null}
+                )}
               </>
             )}
           </nav>
@@ -100,5 +102,3 @@ export function SiteHeader() {
     </header>
   );
 }
-
-    
