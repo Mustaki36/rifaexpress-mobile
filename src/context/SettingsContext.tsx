@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
@@ -10,7 +11,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-  const [isVerificationEnabled, setIsVerificationEnabled] = useState<boolean>(true);
+  const [isVerificationEnabled, setIsVerificationEnabled] = useState<boolean>(false);
 
   return (
     <SettingsContext.Provider value={{ isVerificationEnabled, setIsVerificationEnabled }}>
