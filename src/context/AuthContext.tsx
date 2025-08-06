@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return localUser;
         }
         console.error("Login failed:", firebaseError);
-        throw new Error("auth/invalid-credential");
+        throw firebaseError;
     }
   };
 
@@ -163,50 +163,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
     if (isEmailBlocked(email)) {
-      throw new Error("Este email ha sido bloqueado.");
+      throw new Error("Este email ha sido bloqueado y no puede ser usado para registrar una cuenta.");
     }
-
-    // This will throw an error if the user already exists in Firebase Auth, which is handled by the caller.
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    const user = userCredential.user;
     
-    const newUserProfile: Omit<UserProfile, 'id' | 'createdAt'> = {
-       name,
-       email,
-       phone,
-       address,
-       isVerified,
-       role,
-       avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
-       tickets: [],
-       password: pass, // Storing password for admin-created user compatibility
-       mustChangePassword: false,
-    };
-
-    const userDocRef = doc(db, "users", user.uid);
-    await setDoc(userDocRef, {
-        ...newUserProfile,
-        createdAt: serverTimestamp(),
-    });
-
-    // After setting the doc, we immediately fetch it to get the server-generated timestamp
-    const newUserDoc = await getDoc(userDocRef);
-    const newUserData = newUserDoc.data();
-    if(newUserData) {
-        const createdUser: UserProfile = {
-            id: newUserDoc.id,
-            ...newUserData,
-            createdAt: newUserData.createdAt.toDate(),
-        } as UserProfile;
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = userCredential.user;
         
-        // Update states
-        setAllUsers(prev => [...prev, createdUser]);
-        setCurrentUser(createdUser);
-    } else {
-        throw new Error("Failed to create user profile in database.");
-    }
+        const newUserProfile: Omit<UserProfile, 'id' | 'createdAt'> = {
+           name,
+           email,
+           phone,
+           address,
+           isVerified,
+           role,
+           avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
+           tickets: [],
+           password: pass, // Storing password for admin-created user compatibility
+           mustChangePassword: false,
+        };
     
-    setIsAdminSession(false);
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, {
+            ...newUserProfile,
+            createdAt: serverTimestamp(),
+        });
+    
+        // After setting the doc, we immediately fetch it to get the server-generated timestamp
+        const newUserDoc = await getDoc(userDocRef);
+        const newUserData = newUserDoc.data();
+        if(newUserData) {
+            const createdUser: UserProfile = {
+                id: newUserDoc.id,
+                ...newUserData,
+                createdAt: newUserData.createdAt.toDate(),
+            } as UserProfile;
+            
+            // Update states
+            setAllUsers(prev => [...prev, createdUser]);
+            setCurrentUser(createdUser);
+        } else {
+            throw new Error("Failed to create user profile in database.");
+        }
+        
+        setIsAdminSession(false);
+    } catch (error) {
+        // Re-throw the error so it can be caught in the UI component
+        throw error;
+    }
   };
 
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
@@ -281,3 +285,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

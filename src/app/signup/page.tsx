@@ -206,9 +206,13 @@ export default function SignupPage() {
       router.push("/profile");
     } catch (error) {
        if (error instanceof Error) {
-         let friendlyMessage = "No se pudo crear la cuenta.";
+         let friendlyMessage = "No se pudo crear la cuenta. Por favor, intenta de nuevo.";
          if (error.message.includes("auth/email-already-in-use")) {
             friendlyMessage = "Este email ya está registrado. Por favor, inicia sesión."
+         } else if (error.message.includes("auth/weak-password")) {
+            friendlyMessage = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres."
+         } else if (error.message.includes("blocked")) {
+             friendlyMessage = error.message;
          }
          toast({
             variant: "destructive",
@@ -556,3 +560,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    
