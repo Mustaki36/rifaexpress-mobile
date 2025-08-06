@@ -39,7 +39,7 @@ export function SiteHeader() {
   const homeLink = user?.role === 'admin' ? '/admin' : '/';
 
   const handleAdminClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // Prevent default link behavior if needed, but for a simple redirect it's fine.
+    router.push('/admin');
   }
 
   return (
@@ -62,14 +62,14 @@ export function SiteHeader() {
                 {isAuthenticated && user ? (
                    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                     <DropdownMenuTrigger asChild>
-                       <Link href={user.role === 'admin' ? "/admin" : "/profile"} onClick={user.role === 'admin' ? handleAdminClick : undefined} onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
-                        <Button variant="ghost" className="relative h-auto w-auto p-0 rounded-full">
-                           <Avatar className={user.role === 'admin' ? "h-16 w-16" : "h-9 w-9"}>
-                            <AvatarImage src={user.avatar} alt={user.name} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
+                       <Button variant="ghost" className="relative h-auto w-auto p-0 rounded-full" onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
+                           <Link href={user.role === 'admin' ? "/admin" : "/profile"} onClick={user.role === 'admin' ? handleAdminClick : undefined}>
+                               <Avatar className={user.role === 'admin' ? "h-16 w-16" : "h-9 w-9"}>
+                                <AvatarImage src={user.avatar} alt={user.name} />
+                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                           </Link>
                         </Button>
-                      </Link>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="end" forceMount onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
                       <DropdownMenuLabel className="font-normal">
