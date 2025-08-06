@@ -58,6 +58,7 @@ export default function SignupPage() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isVerificationEnabled } = useSettings();
+  const [isClient, setIsClient] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedUserImage, setCapturedUserImage] = useState<string | null>(null);
   const [licenseImage, setLicenseImage] = useState<string | null>(null);
@@ -66,6 +67,9 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -89,7 +93,7 @@ export default function SignupPage() {
 
 
   useEffect(() => {
-    if (!isVerificationEnabled) return;
+    if (!isVerificationEnabled || !isClient) return;
 
     const getCameraPermission = async () => {
       if (typeof window !== 'undefined' && navigator.mediaDevices) {
@@ -121,7 +125,7 @@ export default function SignupPage() {
             stream.getTracks().forEach(track => track.stop());
         }
     }
-  }, [toast, isVerificationEnabled]);
+  }, [toast, isVerificationEnabled, isClient]);
   
   const handleCaptureUserImage = () => {
     if (videoRef.current) {
@@ -482,7 +486,7 @@ export default function SignupPage() {
                 </div>
                 
 
-                {isVerificationEnabled && (
+                {isClient && isVerificationEnabled && (
                   <Card className="bg-muted/50">
                       <CardHeader>
                           <CardTitle className="flex items-center gap-2"><UserCheck />Verificación de Identidad</CardTitle>
