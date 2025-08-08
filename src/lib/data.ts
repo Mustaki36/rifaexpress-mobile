@@ -4,10 +4,10 @@ import type { Raffle, RaffleResult, UserProfile } from './types';
 // This is now a TEMPLATE for a real admin user in Firestore, not a mock local user.
 // The ID should match a real document in the 'usuarios' collection.
 export const MOCK_ADMIN_USER: UserProfile = {
-  id: 'firebase-admin-user-id', // Changed from 'admin-user-id'
+  id: 'firebase-admin-user-id', // This ID is a placeholder and should match the UID from Firebase Auth.
   name: 'Admin',
   email: 'admin@rifasxpress.com',
-  password: 'password', // This password is for the Firebase Auth user
+  // The password is now managed by Firebase Authentication, not stored here.
   isVerified: true,
   avatar: 'https://placehold.co/100x100.png?text=A',
   role: 'admin',

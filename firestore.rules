@@ -4,43 +4,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check for admin role
-    function isAdmin(userId) {
-      return get(/databases/$(database)/documents/usuarios/$(userId)).data.role == 'admin';
+    function isAppAuthenticated() {
+      return request.auth != null;
     }
 
-    // Raffles: Publicly readable, only creators/admins can create, only admins can edit/delete
+    function isOwner(userId) {
+      return isAppAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/usuarios/$(userId)).data.role;
+    }
+
+    function isAdmin(userId) {
+      return getUserRole(userId) == 'admin';
+    }
+
+    function isCreator(userId) {
+      return getUserRole(userId) == 'creator';
+    }
+
+    // RAFFLES: Public read, creators/admins can create, only admins can edit/delete
     match /raffles/{raffleId} {
       allow read: if true;
-      allow create: if request.auth != null && (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'creator' || isAdmin(request.auth.uid));
-      allow update: if request.auth != null && (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.creatorId == request.auth.uid || isAdmin(request.auth.uid));
-      allow delete: if request.auth != null && isAdmin(request.auth.uid);
+      allow create: if isAppAuthenticated() && (isCreator(request.auth.uid) || isAdmin(request.auth.uid));
+      // Only admin can update raffle details like description, image, etc.
+      // Ticket purchases are handled via a different logic (e.g., Cloud Function or transaction)
+      allow update: if isAppAuthenticated() && isAdmin(request.auth.uid);
+      allow delete: if isAppAuthenticated() && isAdmin(request.auth.uid);
     }
 
-    // Results: Publicly readable, only admins can manage
+    // RESULTS: Public read, only admins can manage
     match /results/{resultId} {
       allow read: if true;
-      allow create, delete: if request.auth != null && isAdmin(request.auth.uid);
+      allow write: if isAppAuthenticated() && isAdmin(request.auth.uid);
     }
 
-    // User Profiles: Readable by any authenticated user, but only writable by the owner or an admin
+    // USERS: Authenticated users can read profiles. Users can edit their own profile. Admins can edit/delete any.
     match /usuarios/{userId} {
-      allow read: if request.auth != null; 
-      allow create: if request.auth.uid == userId; 
-      allow update: if request.auth.uid == userId || isAdmin(request.auth.uid);
-      // Admin can't delete other admins
-      allow delete: if request.auth != null && isAdmin(request.auth.uid) && resource.data.role != 'admin';
-    }
-
-    // Reservations: Users can only manage their own reservations
-    match /reservations/{reservationId} {
-      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read: if isAppAuthenticated();
+      allow create: if isOwner(userId); // Allows a user to create their own document after signing up
+      allow update: if isOwner(userId) || isAdmin(request.auth.uid);
+      allow delete: if isAdmin(request.auth.uid);
     }
     
-    // Blocked Users: Only accessible by admins
+    // RESERVATIONS: Users can only read/write their own reservations
+    match /reservations/{reservationId} {
+      allow read, delete: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+    }
+    
+    // BLOCKED USERS: Only admins can read or write
     match /blockedUsers/{blockedId} {
-      allow read, create, update, delete: if request.auth != null && isAdmin(request.auth.uid);
+      allow read, write: if isAppAuthenticated() && isAdmin(request.auth.uid);
     }
   }
 }

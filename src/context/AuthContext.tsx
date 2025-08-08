@@ -9,7 +9,7 @@ import {
     signOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, addDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, addDoc, deleteDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
 import { useBlock } from './BlockContext';
@@ -37,13 +37,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('%c[AuthContext] Conexión establecida con Firebase Authentication.', 'color: #4CAF50; font-weight: bold;');
       setLoading(true);
-      
       setFirebaseUser(user);
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
-        
         const unsubUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
@@ -63,9 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(null);
             setLoading(false);
         });
-
         return () => unsubUser();
-        
       } else {
         setCurrentUser(null);
         setLoading(false);
@@ -87,7 +82,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              ...userData,
              createdAt: createdAt
          } as UserProfile;
-         setCurrentUser(userProfile);
          return userProfile;
     }
     return null;
@@ -95,71 +89,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     await signOut(auth);
-    setCurrentUser(null);
-    setFirebaseUser(null);
   };
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-        const user = userCredential.user;
-        
-        const newUserProfileData = {
-           name,
-           email,
-           phone,
-           address,
-           isVerified,
-           role,
-           avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
-           tickets: [],
-           mustChangePassword: false,
-        };
+    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    const user = userCredential.user;
     
-        const userDocRef = doc(db, "usuarios", user.uid);
-        await setDoc(userDocRef, {
-            ...newUserProfileData,
-            createdAt: serverTimestamp(),
-        });
-        
-    } catch (error) {
-        console.error("Error during signup: ", error);
-        throw error;
-    }
-  };
+    const newUserProfileData = {
+       name,
+       email,
+       phone,
+       address,
+       isVerified,
+       role,
+       avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
+       tickets: [],
+       mustChangePassword: false,
+    };
 
+    const userDocRef = doc(db, "usuarios", user.uid);
+    await setDoc(userDocRef, {
+        ...newUserProfileData,
+        createdAt: serverTimestamp(),
+    });
+  };
+  
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
-    // This logic should probably be in a backend function for security.
-    // For now, we assume this is only called by an authorized admin client-side.
+    // This function should ideally be a Cloud Function for security.
+    // It creates a Firebase Auth user and then a Firestore user document.
+    // For now, we simulate this on the client for the prototype.
+    // IMPORTANT: This is NOT a secure way to add users in a production app.
+    console.warn("addUser is using a client-side method that is not secure for production.");
+    
+    // Check if user already exists in Firestore (as a proxy for Auth)
     const q = query(collection(db, "usuarios"), where("email", "==", userData.email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
         throw new Error("Este email ya está registrado.");
     }
     
-    try {
-        // We don't create a Firebase auth user here, this is a local user record
-        // This is a FLAWED design, but we'll stick to it for now.
-        // A real app would use a Cloud Function to create the auth user.
-        const { password, ...restOfData } = userData;
-        const newUserProfileData = {
-          ...restOfData,
-          password, // Storing passwords in Firestore is a major security risk. This is for demo only.
-          isVerified: false,
-          avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
-          tickets: [],
-          mustChangePassword: true,
-        };
+    // Since we cannot create a Firebase Auth user from the client SDK with a password directly,
+    // we will just create the Firestore document. The admin will need to guide the user
+    // to set their password via a password reset email flow, which is not implemented here.
+    
+    const { password, ...restOfData } = userData;
+    const newUserProfileData = {
+      ...restOfData,
+      isVerified: false,
+      avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
+      tickets: [],
+      mustChangePassword: true, // User must change password on first login
+    };
 
-        await addDoc(collection(db, "usuarios"), {
-            ...newUserProfileData,
-            createdAt: serverTimestamp()
-        });
-        
-    } catch (error) {
-        console.error("Error al crear usuario en Firestore:", error);
-        throw new Error('No se pudo crear el usuario en Firestore.');
-    }
+    // The document ID will be auto-generated by Firestore.
+    await addDoc(collection(db, "usuarios"), {
+        ...newUserProfileData,
+        createdAt: serverTimestamp()
+    });
   }
   
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
@@ -168,7 +154,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      // Storing passwords in Firestore is a major security risk. This is for demo only.
+      // This is highly insecure and for demonstration purposes only.
+      // In a real app, you would use Firebase Auth's updatePassword function
+      // after re-authenticating the user.
       await editUser(userId, { password: newPass, mustChangePassword: false });
   }
 
@@ -179,7 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser && !!firebaseUser, loading, login, logout, signup, addUser, editUser, deleteUser, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );
