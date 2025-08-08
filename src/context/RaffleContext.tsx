@@ -6,6 +6,7 @@ import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimest
 import { db } from '@/lib/firebase';
 import type { Raffle, ReservedTicket } from '@/lib/types';
 import { useAuth } from './AuthContext';
+import { MOCK_RAFFLES, MOCK_TACOS_USER, MOCK_USER } from '@/lib/data';
 
 const RESERVATION_TIME_MS = 5 * 60 * 1000;
 
@@ -25,6 +26,42 @@ interface RaffleContextType {
 
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
+// Helper function to seed the database
+const seedDatabase = async () => {
+    console.log("Seeding database with initial raffles...");
+    const batch = writeBatch(db);
+    
+    // Check if users exist before creating raffles, if not, create them
+    const user1Doc = await getDoc(doc(db, "usuarios", MOCK_USER.id));
+    if (!user1Doc.exists()) {
+        const { id, ...userData } = MOCK_USER;
+        batch.set(doc(db, "usuarios", id), { ...userData, createdAt: serverTimestamp() });
+    }
+    
+    const user2Doc = await getDoc(doc(db, "usuarios", MOCK_TACOS_USER.id));
+    if (!user2Doc.exists()) {
+        const { id, ...userData } = MOCK_TACOS_USER;
+        batch.set(doc(db, "usuarios", id), { ...userData, createdAt: serverTimestamp() });
+    }
+
+    MOCK_RAFFLES.forEach(raffle => {
+        const { id, ...raffleData } = raffle;
+        const raffleRef = doc(db, "raffles", id);
+        batch.set(raffleRef, {
+            ...raffleData,
+            createdAt: serverTimestamp(),
+            status: 'open',
+        });
+    });
+
+    try {
+        await batch.commit();
+        console.log("Database seeded successfully!");
+    } catch (error) {
+        console.error("Error seeding database:", error);
+    }
+};
+
 export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
@@ -35,19 +72,26 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
     
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       console.log('%c[RaffleContext] Conexión establecida y datos recibidos de Firestore (colección "raffles").', 'color: #4CAF50; font-weight: bold;');
-      const rafflesData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          drawDate: data.drawDate.toDate(),
-          soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
-        } as Raffle;
-      });
-      setRaffles(rafflesData);
-      setLoading(false);
+      
+      // Seed database if it's empty
+      if (querySnapshot.empty) {
+          await seedDatabase();
+          // The listener will pick up the newly added data automatically.
+      } else {
+          const rafflesData = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              drawDate: data.drawDate.toDate(),
+              soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
+            } as Raffle;
+          });
+          setRaffles(rafflesData);
+          setLoading(false);
+      }
     }, (error) => {
       console.error("Error fetching raffles: ", error);
       setLoading(false);
@@ -57,13 +101,13 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Listener should only be active for authenticated users.
-    // Firestore security rules will handle what data they can see.
+    // This listener should be active for any authenticated user.
+    // Firestore security rules will correctly scope the data they can see.
     if (!isAuthenticated) {
         setReservedTickets([]);
-        return () => {};
+        return () => {}; // Return an empty unsubscribe function
     }
-    
+
     const q = query(
         collection(db, "reservations"), 
         where("raffleId", "==", raffleId)
@@ -77,6 +121,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         snapshot.forEach(doc => {
             const data = doc.data();
             const expiresAt = data.expiresAt.toDate();
+            // Only consider reservations that have not expired.
             if (expiresAt.getTime() > now.getTime()) {
                 reservationsData.push({
                     id: doc.id,
@@ -84,12 +129,14 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
                     expiresAt,
                 } as ReservedTicket);
             } else {
+                 // If expired, add to a list to be deleted.
                  expiredReservationIds.push(doc.id);
             }
         });
         
         setReservedTickets(reservationsData);
 
+        // Batch delete any expired reservations found.
         if (expiredReservationIds.length > 0) {
             const batch = writeBatch(db);
             expiredReservationIds.forEach(id => {

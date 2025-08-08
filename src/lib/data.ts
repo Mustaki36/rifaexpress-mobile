@@ -15,9 +15,7 @@ export const MOCK_ADMIN_USER: UserProfile = {
   tickets: [],
 };
 
-// MOCK data is no longer used as the primary data source.
-// They are kept here for reference or potential database seeding in the future.
-
+// MOCK_USER and MOCK_TACOS_USER are now used to seed the database if it's empty.
 export const MOCK_USER: UserProfile = {
   id: 'user-123',
   name: 'Juan Pérez',
@@ -68,3 +66,62 @@ export const MOCK_TACOS_USER: UserProfile = {
   createdAt: new Date('2024-03-20T12:00:00'),
   tickets: [],
 };
+
+
+// MOCK_RAFFLES are now used to seed the database if it's empty.
+export const MOCK_RAFFLES: Omit<Raffle, 'createdAt' | 'status'>[] = [
+  {
+    id: 'car-2024',
+    title: 'Rifa de Auto 0km',
+    description: 'Participa para ganar un auto completamente nuevo. El modelo es sorpresa, ¡pero te aseguramos que te encantará! Sorteo basado en la Lotería de Puerto Rico.',
+    image: 'https://assets.nintendo.com/image/upload/f_auto/q_auto/dpr_1.0/c_scale,w_800/ncom/en_US/games/switch/m/mario-kart-8-deluxe-switch/description-image',
+    prize: 'Auto del Año 0km',
+    ticketPrice: 50,
+    totalTickets: 1000,
+    soldTickets: Array.from({ length: 750 }, (_, i) => i + 1), // 75% sold
+    drawDate: new Date(new Date().setDate(new Date().getDate() + 30)), // 30 days from now
+    aiHint: 'new car',
+    creatorId: MOCK_USER.id,
+  },
+  {
+    id: 'phone-15-pro',
+    title: 'Último Smartphone de Gama Alta',
+    description: 'No te quedes atrás y gana el último modelo de smartphone. Con la mejor cámara, procesador y una pantalla increíble. Ideal para trabajo o entretenimiento.',
+    image: 'https://placehold.co/600x400.png',
+    prize: 'iPhone 15 Pro',
+    ticketPrice: 10,
+    totalTickets: 100,
+    soldTickets: [5, 12, 23, 45, 55, 67, 78, 89, 91, 99, 1, 2, 3],
+    drawDate: new Date(new Date().setDate(new Date().getDate() + 15)), // 15 days from now
+    aiHint: 'smartphone',
+    creatorId: MOCK_USER.id,
+  },
+  {
+    id: 'taco-feast-2024',
+    title: '¡Un Año de Tacos Gratis!',
+    description: '¿Amante de los tacos? ¡Esta es tu rifa! El ganador recibirá una orden de tacos gratis cada semana durante un año completo en "Tacos Place". ¡Al pastor, carnitas, y más!',
+    image: 'https://placehold.co/600x400.png',
+    prize: '1 Año de Tacos Gratis',
+    ticketPrice: 5,
+    totalTickets: 100,
+    soldTickets: Array.from({ length: 98 }, (_, i) => i + 1), // Almost sold out
+    drawDate: new Date(new Date().setDate(new Date().getDate() + 7)), // 7 days from now
+    aiHint: 'tacos food',
+    creatorId: MOCK_TACOS_USER.id,
+  },
+   {
+    id: 'vacation-paradise',
+    title: 'Viaje al Caribe para Dos',
+    description: 'Gana un viaje todo incluido para dos personas a un resort de 5 estrellas en el Caribe. Incluye vuelos, hospedaje y comidas. ¡El escape perfecto te espera!',
+    image: 'https://placehold.co/600x400.png',
+    prize: 'Viaje al Caribe',
+    ticketPrice: 25,
+    totalTickets: 300,
+    soldTickets: [],
+    drawDate: new Date(new Date().setDate(new Date().getDate() + 60)), // 60 days from now
+    aiHint: 'beach vacation',
+    creatorId: MOCK_USER.id,
+  },
+];
+
+    
