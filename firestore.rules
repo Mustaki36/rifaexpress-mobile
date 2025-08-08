@@ -1,6 +1,5 @@
 
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,73 +8,51 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      // Admins must have a specific document in the 'admins' collection
-      // This is more secure than checking a role field on the user document itself for writes.
-      // For this to work, create a collection 'admins' and add a document
-      // where the document ID is the UID of the admin user.
-      return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
     }
     
-    function isCreator() {
-       return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
-             (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'creator' ||
-              get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
+    function getUserRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role;
     }
 
-    // Rules for Raffles
+    // RAFFLES: Public can read, creators/admins can write.
     match /raffles/{raffleId} {
-      allow read: if true; // Anyone can see the raffles
-      allow create: if isAuth() && isCreator();
-      // Allow update/delete only by admin or by the creator who owns the raffle.
-      allow update, delete: if isAuth() && (isAdmin() || (isCreator() && resource.data.creatorId == request.auth.uid));
+      allow read: if true;
+      allow create: if isAuth() && (getUserRole() == 'creator' || getUserRole() == 'admin');
+      allow update: if isAuth() && (request.auth.uid == resource.data.creatorId || getUserRole() == 'admin');
+      allow delete: if isAuth() && (request.auth.uid == resource.data.creatorId || getUserRole() == 'admin');
     }
 
-    // Rules for Users
+    // USUARIOS: Users can manage their own profile. Admins can manage any.
     match /usuarios/{userId} {
-      // Anyone authenticated can view any user profile (needed for winner names, etc.)
-      allow read: if isAuth(); 
-      // A user can create their own profile document (signup) or an admin can create users.
-      allow create: if isAuth() && (request.auth.uid == userId || isAdmin());
-      // A user can only update their own profile, or an admin can update any profile.
-      allow update: if isAuth() && (request.auth.uid == userId || isAdmin());
-      // Only an admin can delete a user profile.
-      allow delete: if isAuth() && isAdmin();
-    }
-    
-    // Rules for Reservations
-    match /reservations/{reservationId} {
-      // Any authenticated user can query the reservations collection for a specific raffle.
-      // Firestore's rules will then only return documents that match the 'read' rule below.
-      // This is essential for the number grid to know which tickets are taken.
-      allow list: if isAuth();
-
-      // A user can only read their OWN reservation document.
-      allow read: if isAuth() && resource.data.userId == request.auth.uid;
-      
-      // A user can only create a reservation for themselves.
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      
-      // A user can only delete their OWN reservation document.
-      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
-      
-      // Reservations cannot be updated. They are created and deleted.
-      allow update: if false;
+      allow read: if isAuth();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || getUserRole() == 'admin';
+      allow delete: if isOwner(userId) || getUserRole() == 'admin';
     }
 
-    // Rules for Results
+    // RESULTS: Public can read, only backend/admin can write.
     match /results/{resultId} {
-      allow read: if true; // Anyone can see results
-      // Only an admin can create (manually post) or delete results.
-      allow create, delete: if isAuth() && isAdmin();
-      allow update: if false;
+      allow read: if true;
+      allow write: if isAuth() && getUserRole() == 'admin';
     }
-    
-     // Rules for Blocked Users
-    match /blockedUsers/{blockedId} {
-      // Only admins can read, create, update, or delete blocked user records.
-      allow read, write: if isAuth() && isAdmin();
+
+    // BLOCKED USERS: Only admins can access.
+    match /blockedUsers/{blockId} {
+      allow read, write: if isAuth() && getUserRole() == 'admin';
+    }
+
+    // RESERVATIONS: Users can only manage their own reservations.
+    match /reservations/{reservationId} {
+      // Allow reading only if the user is the owner of the reservation.
+      // This rule works with the more specific client-side query.
+      allow read: if isOwner(resource.data.userId);
+      allow list: if isAuth(); // Necessary for queries with 'where' clauses.
+      allow create: if isAuth() && isOwner(request.resource.data.userId);
+      allow delete: if isAuth() && isOwner(resource.data.userId);
     }
   }
 }
+
+    

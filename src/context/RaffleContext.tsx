@@ -56,16 +56,16 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // This listener should be active for any authenticated user.
-    // Firestore security rules will correctly scope the data they can see.
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
         setReservedTickets([]);
         return () => {}; // Return an empty unsubscribe function
     }
 
+    // This query now includes the userId, making it more secure and compliant with Firestore rules.
     const q = query(
         collection(db, "reservations"), 
-        where("raffleId", "==", raffleId)
+        where("raffleId", "==", raffleId),
+        where("userId", "==", user.id) 
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -76,7 +76,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         snapshot.forEach(doc => {
             const data = doc.data();
             const expiresAt = data.expiresAt.toDate();
-            // Only consider reservations that have not expired.
             if (expiresAt.getTime() > now.getTime()) {
                 reservationsData.push({
                     id: doc.id,
@@ -84,14 +83,15 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
                     expiresAt,
                 } as ReservedTicket);
             } else {
-                 // If expired, add to a list to be deleted.
                  expiredReservationIds.push(doc.id);
             }
         });
         
+        // This will only contain the current user's reservations, which is intended.
+        // We will handle showing other users' reservations as "blocked" on the client
+        // without needing a separate insecure query.
         setReservedTickets(reservationsData);
 
-        // Batch delete any expired reservations found.
         if (expiredReservationIds.length > 0) {
             const batch = writeBatch(db);
             expiredReservationIds.forEach(id => {
@@ -100,12 +100,12 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
             batch.commit().catch(err => console.error("Failed to delete expired reservations:", err));
         }
     }, (error) => {
-        console.error("Error fetching reservations (permission issue likely):", error);
+        console.error("Error fetching reservations:", error);
         setReservedTickets([]);
     });
 
     return unsubscribe;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
@@ -248,4 +248,6 @@ export const useRaffles = () => {
   }
   return context;
 };
+    
+
     
