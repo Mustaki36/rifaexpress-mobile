@@ -58,16 +58,26 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Si no está autenticado, no hacer nada y devolver un unsubscribe vacío.
     if (!isAuthenticated || !user) {
         setReservedTickets([]);
         return () => {};
     }
 
-    const q = query(
-        collection(db, "reservations"), 
-        where("raffleId", "==", raffleId)
-    );
+    let q;
+    // Si el usuario es admin, puede ver todas las reservaciones de la rifa.
+    // Si no, solo ve las suyas. Esto es clave para las reglas de seguridad.
+    if (user.role === 'admin') {
+        q = query(
+            collection(db, "reservations"), 
+            where("raffleId", "==", raffleId)
+        );
+    } else {
+        q = query(
+            collection(db, "reservations"), 
+            where("raffleId", "==", raffleId),
+            where("userId", "==", user.id)
+        );
+    }
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const now = new Date();
