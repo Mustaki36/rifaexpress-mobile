@@ -9,11 +9,10 @@ import {
     signOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
 import { MOCK_ADMIN_USER } from '@/lib/data';
-import { useBlock } from './BlockContext';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -42,6 +41,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch blocked users directly here to avoid context dependency issues
   useEffect(() => {
+    // This listener should ideally only run for admins, but for simplicity
+    // in the login/signup flow, we fetch it once.
+    // A better approach would be Cloud Functions to enforce blocking.
     const q = query(collection(db, "blockedUsers"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const emails = querySnapshot.docs.map(doc => doc.data().email as string);
