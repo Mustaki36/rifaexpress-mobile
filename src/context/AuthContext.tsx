@@ -158,10 +158,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const deleteUser = async (userId: string) => {
-    console.warn("deleteUser is deprecated. Use suspendUser instead.");
-    // This is a placeholder. Actual deletion should be a Cloud Function.
-    // For now, we will change the user's role to 'suspended'.
-    await suspendUser(userId);
+    if (user?.role !== 'admin') {
+      throw new Error("Only admins can delete users.");
+    }
+    // This only deletes the Firestore document.
+    // The Firebase Auth user still exists. For full deletion, a Cloud Function is required.
+    const userDocRef = doc(db, "usuarios", userId);
+    await deleteDoc(userDocRef);
   }
 
   const suspendUser = async (userId: string) => {

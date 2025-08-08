@@ -19,11 +19,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Pencil, Search, PlusCircle, ShieldCheck, ShieldX, Info, UserX } from "lucide-react";
+import { MoreHorizontal, Pencil, Search, PlusCircle, ShieldCheck, ShieldX, Info, UserX, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -48,14 +49,17 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
+type ActionType = "suspend" | "delete";
+
 export function UsersList() {
   const { toast } = useToast();
-  const { user, suspendUser } = useAuth();
+  const { user, suspendUser, deleteUser } = useAuth();
   const { blockUser } = useBlock();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [userToSuspend, setUserToSuspend] = useState<UserProfile | null>(null);
+  const [actionToConfirm, setActionToConfirm] = useState<ActionType | null>(null);
+  const [userToAction, setUserToAction] = useState<UserProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
@@ -132,8 +136,9 @@ export function UsersList() {
     );
   }, [searchTerm, users]);
 
-  const confirmSuspend = (user: UserProfile) => {
-    setUserToSuspend(user);
+  const confirmAction = (user: UserProfile, action: ActionType) => {
+    setUserToAction(user);
+    setActionToConfirm(action);
     setIsAlertOpen(true);
   };
   
@@ -142,27 +147,40 @@ export function UsersList() {
     setIsEditUserOpen(true);
   }
 
-  const handleSuspend = async () => {
-    if (userToSuspend) {
-      if(userToSuspend.role === 'admin') {
+  const handleConfirm = async () => {
+    if (!userToAction) return;
+
+    if (userToAction.role === 'admin' && (actionToConfirm === 'suspend' || actionToConfirm === 'delete')) {
          toast({
             variant: "destructive",
             title: "Acción no permitida",
-            description: "No se puede suspender una cuenta de administrador.",
+            description: "No se puede suspender o eliminar una cuenta de administrador.",
           });
           setIsAlertOpen(false);
-          setUserToSuspend(null);
+          setUserToAction(null);
           return;
-      }
-      await suspendUser(userToSuspend.id);
+    }
+
+    if (actionToConfirm === 'suspend') {
+      await suspendUser(userToAction.id);
       toast({
         title: "Usuario suspendido",
-        description: `El usuario ${userToSuspend.name} ha sido suspendido. No podrá iniciar sesión.`,
+        description: `El usuario ${userToAction.name} ha sido suspendido.`,
       });
-      loadUsers(); // Recargar usuarios
+      loadUsers();
+    } else if (actionToConfirm === 'delete') {
+      await deleteUser(userToAction.id);
+       toast({
+        title: "Usuario Eliminado",
+        description: `Los datos de ${userToAction.name} han sido eliminados de la base de datos.`,
+      });
+      // Update UI immediately to prevent issues
+      setUsers(prev => prev.filter(u => u.id !== userToAction.id));
     }
+    
     setIsAlertOpen(false);
-    setUserToSuspend(null);
+    setUserToAction(null);
+    setActionToConfirm(null);
   };
 
   const handleBlockUser = (user: UserProfile) => {
@@ -181,6 +199,19 @@ export function UsersList() {
   const handleEditUser = async (userId: string, values: any) => {
       await useAuth().editUser(userId, values);
       loadUsers(); // Recargar usuarios
+  }
+  
+  const alertContent = {
+    suspend: {
+        title: `¿Suspender a ${userToAction?.name}?`,
+        description: "Esta acción impedirá que el usuario inicie sesión. Podrás revertir su rol más tarde.",
+        actionText: "Suspender",
+    },
+    delete: {
+        title: `¿Eliminar a ${userToAction?.name} permanentemente?`,
+        description: "Esta acción no se puede deshacer. Se eliminarán todos los datos del usuario de la base de datos, pero la cuenta de autenticación permanecerá (contácta a soporte para eliminarla por completo).",
+        actionText: "Eliminar Permanentemente",
+    }
   }
 
   return (
@@ -259,7 +290,7 @@ export function UsersList() {
                     <TableCell className="text-right">
                        <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={user.role === 'suspended'}>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
                               <span className="sr-only">Abrir menú</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -269,13 +300,18 @@ export function UsersList() {
                                 <Pencil className="mr-2 h-4 w-4" />
                                 <span>Editar</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => confirmSuspend(user)} className="text-destructive">
+                            <DropdownMenuItem onClick={() => handleBlockUser(user)}>
+                                <ShieldX className="mr-2 h-4 w-4" />
+                                <span>Bloquear Email</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => confirmAction(user, 'suspend')} disabled={user.role === 'suspended'}>
                                 <UserX className="mr-2 h-4 w-4" />
                                 <span>Suspender</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleBlockUser(user)} className="text-destructive">
-                                <ShieldX className="mr-2 h-4 w-4" />
-                                <span>Bloquear Email</span>
+                            <DropdownMenuItem onClick={() => confirmAction(user, 'delete')} className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Eliminar</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -294,14 +330,16 @@ export function UsersList() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Suspender a {userToSuspend?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>{actionToConfirm && alertContent[actionToConfirm].title}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción impedirá que el usuario inicie sesión en la plataforma. Podrás revertir su rol más tarde si es necesario.
+              {actionToConfirm && alertContent[actionToConfirm].description}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSuspend} className="bg-destructive hover:bg-destructive/90">Suspender</AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirm} className="bg-destructive hover:bg-destructive/90">
+                {actionToConfirm && alertContent[actionToConfirm].actionText}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
