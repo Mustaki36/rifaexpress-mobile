@@ -55,8 +55,14 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
   
-  // Listener for reservations collection
+  // Listener for reservations collection - ONLY for authenticated users
   useEffect(() => {
+      // If there's no user, don't even try to listen.
+      if (!user) {
+          setReservedTickets([]); // Clear any stale reservations
+          return;
+      }
+
       const q = query(collection(db, "reservations"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
           const now = new Date();
@@ -87,9 +93,16 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
               });
               batch.commit().catch(err => console.error("Failed to delete expired reservations:", err));
           }
+      }, (error) => {
+          // This will catch permission errors if rules are misconfigured,
+          // but our check for `user` should prevent this.
+          console.error("Error fetching reservations:", error);
+          setReservedTickets([]);
       });
+      
+      // Cleanup the listener when the user logs out or component unmounts
       return () => unsubscribe();
-  }, [])
+  }, [user]) // Re-run this effect when the user's auth state changes
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
