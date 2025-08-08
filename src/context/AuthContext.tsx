@@ -18,8 +18,7 @@ import { useBlock } from './BlockContext';
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
-  allUsers: UserProfile[]; // Still needed for Admin Panel
-  fetchAllUsers: () => Promise<void>; // Expose function for admin panel to call
+  fetchAllUsers: () => Promise<UserProfile[]>;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, pass: string) => Promise<UserProfile | null>;
@@ -37,13 +36,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const { blockedUsers } = useBlock();
   const [isAdminSession, setIsAdminSession] = useState(false);
 
-  const fetchAllUsers = useCallback(async () => {
-    // This function should only be called when needed, e.g., in the admin panel.
+  const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
         const usersList = querySnapshot.docs.map(doc => {
@@ -55,11 +52,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 createdAt: createdAt
             } as UserProfile
         });
-        setAllUsers(usersList);
+        return usersList;
     } catch (error) {
         console.error("Error fetching users: ", error);
-        // Set to empty array on error to prevent crashes
-        setAllUsers([]);
+        return [];
     }
   }, []);
 
@@ -226,8 +222,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp()
         });
         
-        await fetchAllUsers();
-
     } catch (error) {
         console.error("Error al crear usuario en Firestore:", error);
         throw new Error('No se pudo crear el usuario en Firestore.');
@@ -238,8 +232,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userDocRef = doc(db, "usuarios", userId);
     await updateDoc(userDocRef, userData);
     
-    await fetchAllUsers();
-
     if (currentUser?.id === userId) {
         setCurrentUser(prev => prev ? { ...prev, ...userData } as UserProfile : null);
     }
@@ -251,11 +243,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteUser = async (userId: string) => {
     await deleteDoc(doc(db, "usuarios", userId));
-    await fetchAllUsers();
   }
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, allUsers, fetchAllUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, fetchAllUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

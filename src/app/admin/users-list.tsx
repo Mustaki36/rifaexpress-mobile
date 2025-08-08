@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,9 +46,10 @@ import { useBlock } from "@/context/BlockContext";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { allUsers, deleteUser, fetchAllUsers } = useAuth();
+  const { addUser, deleteUser, editUser, fetchAllUsers } = useAuth();
   const { blockUser } = useBlock();
 
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,10 +57,14 @@ export function UsersList() {
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    // Fetch users when component mounts
-    fetchAllUsers();
+  const loadUsers = useCallback(async () => {
+      const userList = await fetchAllUsers();
+      setUsers(userList);
   }, [fetchAllUsers]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
   
   const getRoleDisplayName = (role: 'regular' | 'creator' | 'admin') => {
     switch (role) {
@@ -84,12 +89,12 @@ export function UsersList() {
   }
   
   const filteredUsers = useMemo(() => {
-    if (!Array.isArray(allUsers)) return [];
-    return allUsers.filter(user =>
+    if (!Array.isArray(users)) return [];
+    return users.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, allUsers]);
+  }, [searchTerm, users]);
 
   const confirmDelete = (user: UserProfile) => {
     setUserToDelete(user);
@@ -101,9 +106,8 @@ export function UsersList() {
     setIsEditUserOpen(true);
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (userToDelete) {
-      // Prevent deleting the main admin user
       if(userToDelete.role === 'admin') {
          toast({
             variant: "destructive",
@@ -114,11 +118,12 @@ export function UsersList() {
           setUserToDelete(null);
           return;
       }
-      deleteUser(userToDelete.id);
+      await deleteUser(userToDelete.id);
       toast({
         title: "Usuario eliminado",
         description: `El usuario ${userToDelete.name} ha sido eliminado.`,
       });
+      loadUsers(); // Recargar usuarios
     }
     setIsAlertOpen(false);
     setUserToDelete(null);
@@ -130,6 +135,16 @@ export function UsersList() {
         title: "Usuario Bloqueado",
         description: `${user.email} ha sido añadido a la lista de bloqueo.`,
       });
+  }
+  
+  const handleAddUser = async (values: any) => {
+      await addUser(values);
+      loadUsers(); // Recargar usuarios
+  }
+  
+  const handleEditUser = async (userId: string, values: any) => {
+      await editUser(userId, values);
+      loadUsers(); // Recargar usuarios
   }
 
   return (
@@ -219,8 +234,8 @@ export function UsersList() {
         </CardContent>
       </Card>
 
-      <AddUserDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen} />
-      <EditUserSheet open={isEditUserOpen} onOpenChange={setIsEditUserOpen} user={userToEdit} />
+      <AddUserDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen} onUserAdded={handleAddUser} />
+      <EditUserSheet open={isEditUserOpen} onOpenChange={setIsEditUserOpen} user={userToEdit} onUserEdited={handleEditUser} />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>

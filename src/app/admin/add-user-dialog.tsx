@@ -23,7 +23,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
@@ -39,10 +38,10 @@ const formSchema = z.object({
 interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUserAdded: (values: z.infer<typeof formSchema>) => Promise<void>;
 }
 
-export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
-  const { addUser } = useAuth();
+export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialogProps) {
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -57,12 +56,12 @@ export function AddUserDialog({ open, onOpenChange }: AddUserDialogProps) {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await addUser(values);
+      await onUserAdded(values);
       toast({
         title: "Usuario Creado",
         description: `El usuario ${values.name} ha sido añadido. Deberá cambiar su contraseña al iniciar sesión.`,
       });
-      onOpenChange(false); // Cierra el diálogo al tener éxito
+      onOpenChange(false);
       form.reset();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";

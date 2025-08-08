@@ -24,7 +24,6 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/AuthContext";
 import { Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { UserProfile } from "@/lib/types";
@@ -43,10 +42,10 @@ interface EditUserSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: UserProfile | null;
+  onUserEdited: (userId: string, values: z.infer<typeof formSchema>) => Promise<void>;
 }
 
-export function EditUserSheet({ open, onOpenChange, user }: EditUserSheetProps) {
-  const { editUser } = useAuth();
+export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUserSheetProps) {
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -83,7 +82,7 @@ export function EditUserSheet({ open, onOpenChange, user }: EditUserSheetProps) 
     }
     
     try {
-      await editUser(user.id, values);
+      await onUserEdited(user.id, values);
       toast({
         title: "Usuario Actualizado",
         description: `Los datos de ${values.name} han sido actualizados.`,
