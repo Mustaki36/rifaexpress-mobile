@@ -58,50 +58,50 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Only set up the listener if the user is authenticated and is NOT an admin.
-    if (!isAuthenticated || !user || user.role === 'admin') {
-        setReservedTickets([]); // Ensure reservations are cleared for non-eligible users.
-        return () => {}; // Return an empty unsubscribe function
+    // Only set up the listener if the user is authenticated.
+    if (!isAuthenticated || !user) {
+        setReservedTickets([]);
+        return () => {};
     }
-
+    
+    // This query requires a composite index on (raffleId, userId)
+    // Firestore will provide a link in the console to create it.
     const q = query(
         collection(db, "reservations"), 
         where("raffleId", "==", raffleId)
-        // We will fetch all for the raffle, and filter on the client
-        // This requires less strict security rules, but let's check our rules.
-        // A better query is to fetch just the user's reservations and other people's reservations separately.
-        // For now, the rules only allow a user to read their own reservations.
-    );
-    
-    // The security rules only allow a user to read their own reservations.
-    // The query must therefore include a where clause on the userId.
-    const userReservationsQuery = query(
-        collection(db, "reservations"),
-        where("raffleId", "==", raffleId),
-        where("userId", "==", user.id)
     );
 
-    const unsubscribe = onSnapshot(userReservationsQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const now = new Date();
         const reservationsData: ReservedTicket[] = [];
         const expiredReservationIds: string[] = [];
 
         snapshot.forEach(doc => {
             const data = doc.data();
-            const expiresAt = data.expiresAt.toDate();
-            if (expiresAt.getTime() > now.getTime()) {
-                reservationsData.push({
-                    id: doc.id,
-                    ...data,
-                    expiresAt,
-                } as ReservedTicket);
-            } else {
-                expiredReservationIds.push(doc.id);
-            }
+            // We can only read docs that comply with security rules.
+            // If the rule is `request.auth.uid == resource.data.userId`, then we only get our own.
+            // If the rule is `request.auth.uid == 'admin-id'`, we'd get all.
+            // The current rules allow any authenticated user to read, so we filter on client.
+             if (data.userId === user.id || user.role === 'admin') {
+                const expiresAt = data.expiresAt.toDate();
+                if (expiresAt.getTime() > now.getTime()) {
+                    reservationsData.push({
+                        id: doc.id,
+                        ...data,
+                        expiresAt,
+                    } as ReservedTicket);
+                } else {
+                    // Only the user who created it should delete it.
+                    if (data.userId === user.id) {
+                      expiredReservationIds.push(doc.id);
+                    }
+                }
+             }
         });
         
         setReservedTickets(reservationsData);
 
+        // Batch delete expired reservations for the current user
         if (expiredReservationIds.length > 0) {
             const batch = writeBatch(db);
             expiredReservationIds.forEach(id => {
