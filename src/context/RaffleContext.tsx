@@ -29,7 +29,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
+  const { user, isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
 
   // Listener for raffles collection
   useEffect(() => {
@@ -58,12 +58,16 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
         setReservedTickets([]);
         return () => {};
     }
 
-    const q = query(collection(db, "reservations"), where("raffleId", "==", raffleId));
+    const q = query(
+        collection(db, "reservations"), 
+        where("raffleId", "==", raffleId)
+    );
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const now = new Date();
         const reservationsData: ReservedTicket[] = [];
@@ -98,7 +102,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return unsubscribe;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
