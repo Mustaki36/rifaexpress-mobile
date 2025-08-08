@@ -18,7 +18,8 @@ import { useBlock } from './BlockContext';
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
-  allUsers: UserProfile[];
+  allUsers: UserProfile[]; // Still needed for Admin Panel
+  fetchAllUsers: () => Promise<void>; // Expose function for admin panel to call
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, pass: string) => Promise<UserProfile | null>;
@@ -42,11 +43,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdminSession, setIsAdminSession] = useState(false);
 
   const fetchAllUsers = useCallback(async () => {
+    // This function should only be called when needed, e.g., in the admin panel.
     try {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
         const usersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            // Firestore timestamps need to be converted to JS Date objects
             const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
             return { 
                 id: doc.id, 
@@ -57,18 +58,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setAllUsers(usersList);
     } catch (error) {
         console.error("Error fetching users: ", error);
+        // Set to empty array on error to prevent crashes
+        setAllUsers([]);
     }
   }, []);
 
-  useEffect(() => {
-    fetchAllUsers();
-  }, [fetchAllUsers]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (isAdminSession) {
-          // If we are in an admin session, we don't want to override it with Firebase auth state
           setLoading(false);
           return;
       }
@@ -87,7 +86,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } as UserProfile;
           setCurrentUser(userProfile);
         } else {
-           // This might happen if the Firestore doc is not created yet or deleted
            setCurrentUser(null);
         }
       } else {
@@ -116,7 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return MOCK_ADMIN_USER;
     }
     
-    // Regular user login with Firebase Auth
     try {
         setIsAdminSession(false);
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
@@ -135,7 +132,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return null;
     } catch (firebaseError) {
-       // Local user login check (created via admin panel)
         const q = query(collection(db, "usuarios"), where("email", "==", email), where("password", "==", pass));
         const querySnapshot = await getDocs(q);
         
@@ -149,14 +145,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 createdAt: createdAt
             } as UserProfile;
             
-            setIsAdminSession(false); // It's not an admin session, but a non-firebase auth session
+            setIsAdminSession(false); 
             setCurrentUser(localUser);
             setFirebaseUser(null);
             return localUser;
         }
 
         console.error("Login failed:", firebaseError);
-        throw firebaseError; // Re-throw original Firebase error if local check also fails
+        throw firebaseError;
     }
   };
 
@@ -164,8 +160,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (isAdminSession) {
       setIsAdminSession(false);
     }
-    await signOut(auth).catch(() => {}); // Sign out from firebase
-    setCurrentUser(null); // Clear local user state for both admin and firebase users
+    await signOut(auth).catch(() => {});
+    setCurrentUser(null);
     setFirebaseUser(null);
   };
   
@@ -197,8 +193,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp(),
         });
         
-        await fetchAllUsers();
-
     } catch (error) {
         console.error("Error during signup: ", error);
         throw error;
@@ -220,7 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { password, ...restOfData } = userData;
         const newUserProfileData = {
           ...restOfData,
-          password, // Store temporary password
+          password,
           isVerified: false,
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
@@ -232,7 +226,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp()
         });
         
-        // After adding, refetch all users to ensure the UI is up-to-date.
         await fetchAllUsers();
 
     } catch (error) {
@@ -253,8 +246,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      // This function is for users created by admin. They don't exist in Firebase Auth.
-      // We just update their password in our Firestore db.
       await editUser(userId, { password: newPass, mustChangePassword: false });
   }
 
@@ -264,7 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, allUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, allUsers, fetchAllUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

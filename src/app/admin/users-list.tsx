@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,7 +46,7 @@ import { useBlock } from "@/context/BlockContext";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { allUsers, deleteUser } = useAuth();
+  const { allUsers, deleteUser, fetchAllUsers } = useAuth();
   const { blockUser } = useBlock();
 
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -55,6 +55,11 @@ export function UsersList() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    // Fetch users when component mounts
+    fetchAllUsers();
+  }, [fetchAllUsers]);
   
   const getRoleDisplayName = (role: 'regular' | 'creator' | 'admin') => {
     switch (role) {
@@ -79,6 +84,7 @@ export function UsersList() {
   }
   
   const filteredUsers = useMemo(() => {
+    if (!Array.isArray(allUsers)) return [];
     return allUsers.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
