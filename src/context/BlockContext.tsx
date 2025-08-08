@@ -36,6 +36,9 @@ export const BlockProvider = ({ children }: { children: ReactNode }) => {
                   } as BlockedUser;
               });
               setBlockedUsers(usersData);
+          }, (error) => {
+              console.error("Error listening to blocked users:", error);
+              setBlockedUsers([]);
           });
           // Limpiamos el listener cuando el componente se desmonta o el usuario cambia.
           return () => unsubscribe();
