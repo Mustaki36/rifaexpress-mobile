@@ -232,8 +232,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             createdAt: serverTimestamp()
         });
         
-        // After adding, fetch all users again to update the list in UI
-        await fetchAllUsers();
+        // After adding, update the local state to include the new user
+        const newUser: UserProfile = {
+            id: docRef.id,
+            ...newUserProfileData,
+            createdAt: new Date(),
+        }
+        setAllUsers(prevUsers => [...prevUsers, newUser]);
 
     } catch (error) {
         console.error("Error al crear usuario en Firestore:", error);
