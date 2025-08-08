@@ -1,44 +1,44 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Helper function to check if the user is an admin
+    function isAdmin() {
+      // In a real app, this might check a custom claim or a document.
+      // For this mock app, we check against a hardcoded admin UID.
+      return request.auth != null && request.auth.uid == 'admin-user-id';
     }
 
-    // Allow public read for raffles and results
+    // Raffles are public to read, but only authenticated users can create/update.
     match /raffles/{raffleId} {
       allow read: if true;
-      allow create: if request.auth != null; // Any authenticated user can create
-      allow update: if request.auth != null && (request.auth.uid == resource.data.creatorId || request.auth.uid == 'admin-user-id'); // Only creator or admin can update
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.creatorId || request.auth.uid == 'admin-user-id'); // Only creator or admin can delete
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null && (resource.data.creatorId == request.auth.uid || isAdmin());
     }
 
+    // Results are public to read. Writes should ideally be handled by a secure backend process.
     match /results/{resultId} {
-        allow read: if true;
-        allow write: if request.auth != null && request.auth.uid == 'admin-user-id'; // Only admin can write results
+      allow read: if true;
+      allow write: if false; 
     }
 
-    // Users can only read/write their own data, but admin can access all
+    // User data can be read by any authenticated user, but only the user themselves or an admin can write.
     match /usuarios/{userId} {
-      allow read, update, delete: if request.auth != null && (request.auth.uid == userId || request.auth.uid == 'admin-user-id');
-      allow create: if request.auth != null || request.auth.uid == 'admin-user-id'; // Allow user creation
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
-
-    // Only admin can read/write the full list of users
-    match /usuarios/{document=**} {
-        allow list: if request.auth != null && request.auth.uid == 'admin-user-id';
-    }
-
-    // Reservations can only be managed by authenticated users for themselves
+    
+    // Reservations can only be managed by authenticated users.
     match /reservations/{reservationId} {
-        allow read, write: if request.auth != null;
+      allow read, write, delete: if request.auth != null;
     }
 
-    // Blocked users list is admin-only
-    match /blockedUsers/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == 'admin-user-id';
+    // Blocked users list is read-only for clients, managed by admin functions or server-side logic.
+    match /blockedUsers/{blockedId} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
   }
 }
