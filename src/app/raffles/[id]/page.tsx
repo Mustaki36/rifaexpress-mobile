@@ -62,16 +62,17 @@ export default function RafflePage() {
 
 
   const otherUsersReservedTickets = useMemo(() => {
-    const now = new Date();
+    // We get all reserved tickets from the context, which is now fed by Firestore in real-time.
+    // We just filter out the ones for the current user so they don't see their own selections as "reserved by others".
     return reservedTickets
-      .filter(t => t.raffleId === raffleId && t.userId !== user?.id && t.expiresAt.getTime() > now.getTime())
+      .filter(t => t.raffleId === raffleId && t.userId !== user?.id)
       .map(t => t.number);
   }, [reservedTickets, raffleId, user?.id]);
 
   useEffect(() => {
-    // This is a cleanup function that runs when the component unmounts
+    // This is a cleanup function that runs when the component unmounts.
+    // It releases any tickets the user had selected but didn't purchase.
     return () => {
-      // If the user has selected numbers but hasn't purchased them, release them
       if (user?.id && raffleId && selectedNumbers.length > 0) {
         releaseTicketsForUser(user.id, raffleId);
       }
@@ -87,17 +88,17 @@ export default function RafflePage() {
     );
   }
 
-  const handleNumberSelect = (number: number) => {
+  const handleNumberSelect = async (number: number) => {
     if (!isAuthenticated || !user) {
         setIsAuthDialogOpen(true);
         return;
     }
 
     if (selectedNumbers.includes(number)) {
-      releaseTicket(raffle.id, number, user.id);
+      await releaseTicket(raffle.id, number, user.id);
       setSelectedNumbers((prev) => prev.filter((n) => n !== number));
     } else {
-      const success = reserveTicket(raffle.id, number, user.id);
+      const success = await reserveTicket(raffle.id, number, user.id);
       if (success) {
         setSelectedNumbers((prev) => [...prev, number]);
       } else {

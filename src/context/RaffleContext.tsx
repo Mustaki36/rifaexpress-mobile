@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, getDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, getDoc, where, getDocs, writeBatch } from "firebase/firestore";
 import { db } from '@/lib/firebase';
 import type { Raffle, ReservedTicket } from '@/lib/types';
 import { useAuth } from './AuthContext';
@@ -16,9 +16,9 @@ interface RaffleContextType {
   addRaffle: (raffle: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => Promise<void>;
   editRaffle: (raffleId: string, raffleData: Partial<Omit<Raffle, 'id'>>) => Promise<void>;
   deleteRaffle: (raffleId: string) => Promise<void>;
-  reserveTicket: (raffleId: string, number: number, userId: string) => boolean;
-  releaseTicket: (raffleId: string, number: number, userId: string) => void;
-  releaseTicketsForUser: (userId: string, raffleId: string) => void;
+  reserveTicket: (raffleId: string, number: number, userId: string) => Promise<boolean>;
+  releaseTicket: (raffleId: string, number: number, userId: string) => Promise<void>;
+  releaseTicketsForUser: (userId: string, raffleId: string) => Promise<void>;
   purchaseTickets: (raffleId: string, numbers: number[], userId: string) => Promise<void>;
 }
 
@@ -28,7 +28,9 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
+  // Listener for raffles collection
   useEffect(() => {
     setLoading(true);
     const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
@@ -40,7 +42,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
           id: doc.id,
           ...data,
           drawDate: data.drawDate.toDate(),
-          // Ensure soldTickets is always an array
           soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
         } as Raffle;
       });
@@ -53,15 +54,43 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
-
-  // Cleanup expired reserved tickets
+  
+  // Listener for reservations collection
   useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      setReservedTickets(prev => prev.filter(ticket => ticket.expiresAt.getTime() > now.getTime()));
-    }, 10000); // Check every 10 seconds
-    return () => clearInterval(interval);
-  }, []);
+      const q = query(collection(db, "reservations"));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          const now = new Date();
+          const reservationsData: ReservedTicket[] = [];
+          const expiredReservationIds: string[] = [];
+
+          snapshot.forEach(doc => {
+              const data = doc.data();
+              const expiresAt = data.expiresAt.toDate();
+              if (expiresAt.getTime() > now.getTime()) {
+                  reservationsData.push({
+                      id: doc.id,
+                      ...data,
+                      expiresAt,
+                  } as ReservedTicket);
+              } else {
+                  expiredReservationIds.push(doc.id);
+              }
+          });
+
+          setReservedTickets(reservationsData);
+
+          // Clean up expired reservations in Firestore
+          if (expiredReservationIds.length > 0) {
+              const batch = writeBatch(db);
+              expiredReservationIds.forEach(id => {
+                  batch.delete(doc(db, "reservations", id));
+              });
+              batch.commit().catch(err => console.error("Failed to delete expired reservations:", err));
+          }
+      });
+      return () => unsubscribe();
+  }, [])
+
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
     await addDoc(collection(db, "raffles"), {
@@ -82,57 +111,67 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     await deleteDoc(raffleDocRef);
   };
   
-  const reserveTicket = (raffleId: string, number: number, userId: string): boolean => {
-    const now = new Date();
-    // Re-check raffles state for most up-to-date sold tickets
+  const reserveTicket = async (raffleId: string, number: number, userId: string): Promise<boolean> => {
     const raffle = raffles.find(r => r.id === raffleId);
     if (!raffle) return false;
     
+    // Double check against local state first for quick feedback
     const isSold = raffle.soldTickets.includes(number);
-    const isReserved = reservedTickets.some(
-      t => t.raffleId === raffleId && t.number === number && t.expiresAt > now
-    );
+    const isReserved = reservedTickets.some(t => t.raffleId === raffleId && t.number === number);
+    if (isSold || isReserved) return false;
 
-    if (isSold || isReserved) {
-      return false;
+    // Proceed to create reservation in Firestore
+    try {
+        await addDoc(collection(db, "reservations"), {
+            raffleId,
+            number,
+            userId,
+            expiresAt: new Date(Date.now() + RESERVATION_TIME_MS),
+        });
+        return true;
+    } catch (error) {
+        console.error("Error reserving ticket in Firestore:", error);
+        // This might fail due to security rules if a reservation already exists (needs configuration)
+        return false;
     }
-    
-    const newReservation: ReservedTicket = {
-      raffleId,
-      number,
-      userId,
-      expiresAt: new Date(now.getTime() + RESERVATION_TIME_MS),
-    };
-    
-    // Cleanup expired before adding new one
-    setReservedTickets(prev => [...prev.filter(t => t.expiresAt > now), newReservation]);
-    return true;
   };
 
-  const releaseTicket = (raffleId: string, number: number, userId: string) => {
-    setReservedTickets(prev => prev.filter(
-      t => !(t.raffleId === raffleId && t.number === number && t.userId === userId)
-    ));
+  const releaseTicket = async (raffleId: string, number: number, userId: string) => {
+    const q = query(collection(db, "reservations"), 
+        where("raffleId", "==", raffleId),
+        where("number", "==", number),
+        where("userId", "==", userId)
+    );
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+        const docId = snapshot.docs[0].id;
+        await deleteDoc(doc(db, "reservations", docId));
+    }
   };
 
-  const releaseTicketsForUser = useCallback((userId: string, raffleId: string) => {
-      setReservedTickets(prev => prev.filter(
-          t => !(t.userId === userId && t.raffleId === raffleId)
-      ))
-  }, []);
+  const releaseTicketsForUser = async (userId: string, raffleId: string) => {
+    const q = query(collection(db, "reservations"), 
+        where("userId", "==", userId),
+        where("raffleId", "==", raffleId)
+    );
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    snapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+  };
 
   const purchaseTickets = async (raffleId: string, numbers: number[], userId: string) => {
      const raffleDocRef = doc(db, "raffles", raffleId);
      const raffle = raffles.find(r => r.id === raffleId);
      if (!raffle) throw new Error("Raffle not found");
      
-     // Ensure no duplicate tickets are added
      const newSoldTickets = [...new Set([...raffle.soldTickets, ...numbers])].sort((a,b) => a-b);
      await updateDoc(raffleDocRef, {
         soldTickets: newSoldTickets
      });
 
-     // Update user's ticket records in Firestore
      if (userId) {
         const userDocRef = doc(db, "usuarios", userId);
         const userDocSnap = await getDoc(userDocRef);
@@ -143,11 +182,9 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
                 raffleTitle: raffle.title,
                 ticketNumbers: numbers,
             };
-
             const existingTickets = Array.isArray(userData.tickets) ? userData.tickets : [];
             const existingRaffleIndex = existingTickets.findIndex((t: any) => t.raffleId === raffle.id);
             let updatedTickets = [...existingTickets];
-
             if (existingRaffleIndex > -1) {
                 const existingRecord = updatedTickets[existingRaffleIndex];
                 const combinedNumbers = [...new Set([...existingRecord.ticketNumbers, ...numbers])].sort((a,b) => a-b);
@@ -158,11 +195,19 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
             await updateDoc(userDocRef, { tickets: updatedTickets });
         }
      }
-
-     // Remove the now-purchased tickets from the local reservation state
-     setReservedTickets(prev => prev.filter(
-        t => !(t.raffleId === raffleId && numbers.includes(t.number) && t.userId === userId)
-     ));
+     
+     // Remove reservations for purchased tickets
+    const q = query(collection(db, "reservations"), 
+        where("raffleId", "==", raffleId),
+        where("userId", "==", userId),
+        where("number", "in", numbers)
+    );
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    snapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
   };
 
   return (

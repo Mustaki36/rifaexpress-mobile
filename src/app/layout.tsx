@@ -36,18 +36,18 @@ export default function RootLayout({
         <TransitionProvider>
           <SettingsProvider>
             <BlockProvider>
+              <AuthProvider>
                 <RaffleProvider>
-                  <AuthProvider>
-                    <ResultsProvider>
-                      <div className="relative flex min-h-screen flex-col">
-                        <SiteHeader />
-                        <main className="flex-1">{children}</main>
-                        <SiteFooter />
-                      </div>
-                      <Toaster />
-                    </ResultsProvider>
-                  </AuthProvider>
+                  <ResultsProvider>
+                    <div className="relative flex min-h-screen flex-col">
+                      <SiteHeader />
+                      <main className="flex-1">{children}</main>
+                      <SiteFooter />
+                    </div>
+                    <Toaster />
+                  </ResultsProvider>
                 </RaffleProvider>
+              </AuthProvider>
             </BlockProvider>
           </SettingsProvider>
         </TransitionProvider>

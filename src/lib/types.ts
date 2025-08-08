@@ -68,6 +68,7 @@ export type BlockedUser = {
 };
 
 export type ReservedTicket = {
+  id?: string; // Firestore document ID
   raffleId: string;
   number: number;
   userId: string;
