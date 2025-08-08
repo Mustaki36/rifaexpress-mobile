@@ -25,9 +25,11 @@ service cloud.firestore {
     }
 
     // Secure reservations
-    match /reservations/{reservationId} {
-      allow read, create, delete: if request.auth != null && request.auth.uid == request.resource.data.userId;
-    }
+   match /reservations/{reservationId} {
+  allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+  allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+}
+
     
     // Secure blocked users list
     match /blockedUsers/{blockedId} {
