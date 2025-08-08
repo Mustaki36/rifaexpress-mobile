@@ -7,7 +7,9 @@ import {
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
     signOut,
-    User as FirebaseUser
+    User as FirebaseUser,
+    signInWithCredential,
+    EmailAuthProvider
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, addDoc, deleteDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
@@ -125,21 +127,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword' | 'role'> & { password: string, role: 'regular' | 'creator' }) => {
-    // This function is intended to be called by an admin.
-    // WARNING: The standard Firebase client-side SDK (`firebase/auth`) does not provide a direct way for an admin to create a new user without signing out the current admin.
-    // The `createUserWithEmailAndPassword` function automatically signs in the new user.
-    // The standard, secure way to implement this feature is with a server-side environment (like Cloud Functions) using the Firebase Admin SDK.
-    // The following implementation is a workaround and will result in the admin being temporarily signed out. This is not ideal for production environments.
-    
     const adminUser = auth.currentUser;
-    if (!adminUser) {
-        throw new Error("Admin not signed in.");
+    if (!adminUser || !adminUser.email) {
+        throw new Error("Administrador no ha iniciado sesión o no tiene email.");
     }
+    const adminEmail = adminUser.email;
+    
+    // IMPORTANT: This is a hacky workaround for client-side user creation by an admin.
+    // The correct way is to use the Admin SDK in a Cloud Function.
+    // This flow will sign out the admin and sign in the new user, then attempt to sign the admin back in.
+    // It is not recommended for production environments.
 
     try {
+        // Create the new user account
         const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
         const newUser = userCredential.user;
         
+        // Prepare new user's profile data
         const newUserProfileData = {
           name: userData.name,
           email: userData.email,
@@ -147,26 +151,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isVerified: false,
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
-          mustChangePassword: true,
+          mustChangePassword: true, // Force password change on first login
         };
 
+        // Create the user profile document in Firestore
         await setDoc(doc(db, "usuarios", newUser.uid), {
             ...newUserProfileData,
             createdAt: serverTimestamp(),
         });
         
-        // After creating the new user, the admin is signed out and the new user is signed in.
-        // We now sign the new user out. The admin will have to log in again.
+        // Sign out the newly created user
         await signOut(auth);
-        alert("Usuario creado exitosamente. El administrador debe iniciar sesión de nuevo.");
+        
+        // Prompt admin to sign back in
+        const adminPassword = prompt("Usuario creado exitosamente. Por favor, re-ingresa la contraseña de administrador para continuar:");
 
+        if (adminPassword) {
+            await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+        } else {
+            throw new Error("Se requiere la contraseña de administrador para continuar la sesión.");
+        }
 
-    } catch (error) {
-        // If user creation fails, the admin should still be logged in.
-        // We need to handle re-authentication of the admin if something went wrong after they were logged out.
-        // For this prototype, we'll log the error and rely on the admin to log back in manually.
+    } catch (error: any) {
         console.error("Error adding user:", error);
-        throw error;
+        
+        // Try to re-authenticate admin if something failed, as they might have been signed out
+        if (!auth.currentUser) {
+             const adminPassword = prompt("Ocurrió un error. Por favor, re-ingresa la contraseña de administrador para continuar:");
+             if (adminPassword) {
+                await signInWithEmailAndPassword(auth, adminEmail, adminPassword).catch(e => console.error("Admin re-login failed:", e));
+             }
+        }
+        
+        if (error.code === 'auth/email-already-in-use') {
+            throw new Error('Este correo electrónico ya está en uso. Por favor, utiliza otro.');
+        }
+
+        throw new Error("No se pudo crear el usuario. Revisa los datos y vuelve a intentarlo.");
     }
   };
   
@@ -198,7 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser && !!firebaseUser, loading, login, logout, signup, addUser, editUser, deleteUser, suspendUser, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser && !!firebaseUser, loading, login, logout, signup, addUser, editUser, deleteUser, forcePasswordChange, suspendUser }}>
       {children}
     </AuthContext.Provider>
   );
