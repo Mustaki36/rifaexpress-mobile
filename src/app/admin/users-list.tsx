@@ -53,7 +53,7 @@ type ActionType = "suspend" | "delete";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { user, suspendUser, deleteUser } = useAuth();
+  const { user, suspendUser, deleteUser, addUser, editUser } = useAuth();
   const { blockUser } = useBlock();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -150,37 +150,31 @@ export function UsersList() {
   const handleConfirm = async () => {
     if (!userToAction) return;
 
-    if (userToAction.role === 'admin' && (actionToConfirm === 'suspend' || actionToConfirm === 'delete')) {
-         toast({
-            variant: "destructive",
-            title: "Acción no permitida",
-            description: "No se puede suspender o eliminar una cuenta de administrador.",
-          });
-          setIsAlertOpen(false);
-          setUserToAction(null);
-          return;
+    try {
+        if (actionToConfirm === 'suspend') {
+          if (userToAction.role === 'admin') {
+             toast({ variant: "destructive", title: "Acción no permitida", description: "No se puede suspender una cuenta de administrador." });
+             return;
+          }
+          await suspendUser(userToAction.id);
+          toast({ title: "Usuario suspendido", description: `El usuario ${userToAction.name} ha sido suspendido.` });
+        } else if (actionToConfirm === 'delete') {
+          if (userToAction.role === 'admin') {
+              toast({ variant: "destructive", title: "Acción no permitida", description: "No se puede eliminar una cuenta de administrador." });
+              return;
+          }
+          await deleteUser(userToAction.id);
+          toast({ title: "Usuario Eliminado", description: `Los datos de ${userToAction.name} han sido eliminados.` });
+        }
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
+        toast({ variant: "destructive", title: "Error", description: errorMessage });
+    } finally {
+        loadUsers();
+        setIsAlertOpen(false);
+        setUserToAction(null);
+        setActionToConfirm(null);
     }
-
-    if (actionToConfirm === 'suspend') {
-      await suspendUser(userToAction.id);
-      toast({
-        title: "Usuario suspendido",
-        description: `El usuario ${userToAction.name} ha sido suspendido.`,
-      });
-      loadUsers();
-    } else if (actionToConfirm === 'delete') {
-      await deleteUser(userToAction.id);
-       toast({
-        title: "Usuario Eliminado",
-        description: `Los datos de ${userToAction.name} han sido eliminados de la base de datos.`,
-      });
-      // Update UI immediately to prevent issues
-      setUsers(prev => prev.filter(u => u.id !== userToAction.id));
-    }
-    
-    setIsAlertOpen(false);
-    setUserToAction(null);
-    setActionToConfirm(null);
   };
 
   const handleBlockUser = (user: UserProfile) => {
@@ -192,12 +186,12 @@ export function UsersList() {
   }
   
   const handleAddUser = async (values: any) => {
-      await useAuth().addUser(values);
+      await addUser(values);
       loadUsers(); // Recargar usuarios
   }
   
   const handleEditUser = async (userId: string, values: any) => {
-      await useAuth().editUser(userId, values);
+      await editUser(userId, values);
       loadUsers(); // Recargar usuarios
   }
   
@@ -346,3 +340,5 @@ export function UsersList() {
     </>
   );
 }
+
+    
