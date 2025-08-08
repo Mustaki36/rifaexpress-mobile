@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import type { BlockedUser } from '@/lib/types';
 import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { db } from '@/lib/firebase';
+import { useAuth } from './AuthContext';
 
 interface BlockContextType {
   blockedUsers: BlockedUser[];
@@ -17,24 +18,32 @@ const BlockContext = createContext<BlockContextType | undefined>(undefined);
 
 export const BlockProvider = ({ children }: { children: ReactNode }) => {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const { user } = useAuth(); // Usamos el hook de autenticación
 
   // onSnapshot crea un listener en tiempo real para la colección "blockedUsers".
   // Esto mantiene la lista de usuarios bloqueados sincronizada en toda la aplicación.
   useEffect(() => {
-      const q = query(collection(db, "blockedUsers"));
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-          const usersData = querySnapshot.docs.map(doc => {
-              const data = doc.data();
-              return {
-                  id: doc.id,
-                  ...data,
-                  blockedAt: data.blockedAt.toDate(),
-              } as BlockedUser;
+      // Solo establecemos el listener si hay un usuario y es un admin.
+      if (user && user.role === 'admin') {
+          const q = query(collection(db, "blockedUsers"));
+          const unsubscribe = onSnapshot(q, (querySnapshot) => {
+              const usersData = querySnapshot.docs.map(doc => {
+                  const data = doc.data();
+                  return {
+                      id: doc.id,
+                      ...data,
+                      blockedAt: data.blockedAt.toDate(),
+                  } as BlockedUser;
+              });
+              setBlockedUsers(usersData);
           });
-          setBlockedUsers(usersData);
-      });
-      return () => unsubscribe();
-  }, []);
+          // Limpiamos el listener cuando el componente se desmonta o el usuario cambia.
+          return () => unsubscribe();
+      } else {
+          // Si no es un admin, la lista de bloqueados está vacía y no hay listener.
+          setBlockedUsers([]);
+      }
+  }, [user]); // El efecto se vuelve a ejecutar si el estado del usuario cambia.
 
   // Función para añadir un nuevo usuario a la colección de bloqueados.
   const blockUser = async (email: string, reason: string) => {

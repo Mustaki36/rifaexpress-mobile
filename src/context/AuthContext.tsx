@@ -37,8 +37,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const { blockedUsers } = useBlock();
+  const [blockedEmails, setBlockedEmails] = useState<string[]>([]);
   const [isAdminSession, setIsAdminSession] = useState(false);
+
+  // Fetch blocked users directly here to avoid context dependency issues
+  useEffect(() => {
+    const q = query(collection(db, "blockedUsers"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const emails = querySnapshot.docs.map(doc => doc.data().email as string);
+        setBlockedEmails(emails);
+    }, (error) => {
+        // This might fail for non-admins, which is fine. They won't have any blocked emails.
+        console.warn("Could not fetch blocked users list. This is expected for non-admins.", error.message);
+        setBlockedEmails([]);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
     try {
@@ -94,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isAdminSession]);
 
   const isEmailBlocked = (email: string) => {
-    return blockedUsers.some(u => u.email === email);
+    return blockedEmails.includes(email);
   }
 
   const login = async (email: string, pass: string): Promise<UserProfile | null> => {

@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from "@/lib/utils";
@@ -35,8 +36,8 @@ export default function RootLayout({
       >
         <TransitionProvider>
           <SettingsProvider>
-            <BlockProvider>
-              <AuthProvider>
+            <AuthProvider>
+              <BlockProvider>
                 <RaffleProvider>
                   <ResultsProvider>
                     <div className="relative flex min-h-screen flex-col">
@@ -47,8 +48,8 @@ export default function RootLayout({
                     <Toaster />
                   </ResultsProvider>
                 </RaffleProvider>
-              </AuthProvider>
-            </BlockProvider>
+              </BlockProvider>
+            </AuthProvider>
           </SettingsProvider>
         </TransitionProvider>
       </body>
