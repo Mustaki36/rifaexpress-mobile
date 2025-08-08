@@ -40,6 +40,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
     // This function is now intended to be called only by an authenticated admin.
     // The security rules should enforce this.
+    if (!currentUser || currentUser.role !== 'admin') {
+      console.warn("Attempted to fetch all users without admin privileges.");
+      return [];
+    }
+    
+    // NOTE: This will fail if the Firestore rules don't allow it.
+    // This is a known issue for the mock admin user.
     try {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
         const usersList = querySnapshot.docs.map(doc => {
@@ -56,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error fetching users: ", error);
         return [];
     }
-  }, []);
+  }, [currentUser]);
 
 
   useEffect(() => {

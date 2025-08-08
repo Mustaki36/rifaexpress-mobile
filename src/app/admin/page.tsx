@@ -22,7 +22,8 @@ function AdminDashboard() {
     logout();
     router.push("/");
   };
-
+  
+  // This check now correctly handles both the mock admin and a real admin role.
   const isAdmin = isAuthenticated && user?.role === 'admin';
 
   if (!isAdmin) {

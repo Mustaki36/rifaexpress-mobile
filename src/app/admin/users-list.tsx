@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Pencil, Trash2, Search, PlusCircle, ShieldCheck, ShieldX } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Search, PlusCircle, ShieldCheck, ShieldX, Info } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,10 +43,12 @@ import type { UserProfile } from "@/lib/types";
 import { AddUserDialog } from "./add-user-dialog";
 import { EditUserSheet } from "./edit-user-sheet";
 import { useBlock } from "@/context/BlockContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { MOCK_USER } from "@/lib/data";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { addUser, deleteUser, editUser, fetchAllUsers } = useAuth();
+  const { user, addUser, deleteUser, editUser, fetchAllUsers } = useAuth();
   const { blockUser } = useBlock();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -56,11 +58,28 @@ export function UsersList() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
-      const userList = await fetchAllUsers();
-      setUsers(userList);
-  }, [fetchAllUsers]);
+    // Only fetch if the user is a real admin authenticated via Firebase
+    if (user?.role === 'admin' && user.id !== 'admin-user-id') { 
+        setIsLoading(true);
+        setError(null);
+        try {
+            const userList = await fetchAllUsers();
+            setUsers(userList);
+        } catch (e) {
+            console.error(e);
+            setError("No se pudieron cargar los usuarios. Revisa los permisos de Firestore.");
+        } finally {
+            setIsLoading(false);
+        }
+    } else {
+        // For the mock admin, we use mock data.
+        setUsers([MOCK_USER]);
+    }
+  }, [user, fetchAllUsers]);
 
   useEffect(() => {
     loadUsers();
@@ -108,11 +127,11 @@ export function UsersList() {
 
   const handleDelete = async () => {
     if (userToDelete) {
-      if(userToDelete.role === 'admin') {
+      if(userToDelete.id === 'admin-user-id' || userToDelete.role === 'admin') {
          toast({
             variant: "destructive",
             title: "Acción no permitida",
-            description: "No se puede eliminar la cuenta principal de administrador.",
+            description: "No se puede eliminar una cuenta de administrador.",
           });
           setIsAlertOpen(false);
           setUserToDelete(null);
@@ -174,6 +193,23 @@ export function UsersList() {
             </div>
         </CardHeader>
         <CardContent>
+           {user?.id === 'admin-user-id' && (
+             <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-800">Vista de Demostración</AlertTitle>
+                <AlertDescription className="text-blue-700">
+                    Estás viendo una lista de ejemplo. Para gestionar usuarios reales, inicia sesión con una cuenta de administrador creada en Firebase.
+                </AlertDescription>
+             </Alert>
+           )}
+           {error && (
+             <Alert variant="destructive" className="mb-4">
+                <AlertTitle>Error de Carga</AlertTitle>
+                <AlertDescription>
+                    {error}
+                </AlertDescription>
+             </Alert>
+           )}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
@@ -187,7 +223,11 @@ export function UsersList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {isLoading ? (
+                    <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24">Cargando usuarios...</TableCell>
+                    </TableRow>
+                ) : filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
