@@ -102,7 +102,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
       
       // Cleanup the listener when the user logs out or component unmounts
       return () => unsubscribe();
-  }, [user]) // Re-run this effect when the user's auth state changes
+  }, [user]); // Re-run this effect when the user's auth state changes
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
