@@ -1,42 +1,64 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
     
-    // Allow public read access to raffles and results
+    function getRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuth() && getRole() == 'admin';
+    }
+
+    function isCreator() {
+      return isAuth() && (getRole() == 'creator' || getRole() == 'admin');
+    }
+
+    // Publicly readable collections
     match /raffles/{raffleId} {
       allow read: if true;
-      allow create: if request.auth != null && (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'creator' || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
-      // Admin can update any raffle. Creator can only update their own.
-      allow update: if request.auth != null && (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin' || request.resource.data.creatorId == request.auth.uid);
-      // Admin can delete any raffle. Creator can only delete their own.
-      allow delete: if request.auth != null && (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin' || resource.data.creatorId == request.auth.uid);
+      allow create: if isCreator();
+      // Logic to prevent editing sold tickets is in the app, but rules secure who can edit.
+      allow update: if isAuth() && (resource.data.creatorId == request.auth.uid || isAdmin());
+      allow delete: if isAuth() && (resource.data.creatorId == request.auth.uid || isAdmin());
     }
 
     match /results/{resultId} {
-      allow read: if true;
-      // Only admin can create or delete results for now to ensure integrity.
-      allow create, delete: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+        allow read: if true;
+        allow create, delete: if isAdmin();
     }
 
-    // Secure user data
+    // User-specific collections
     match /usuarios/{userId} {
-      allow read: if request.auth != null; // Any authenticated user can read basic user profiles.
-      allow create: if request.auth.uid == userId; // User can create their own profile document.
-      allow update: if request.auth.uid == userId || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin'; // User can update their own profile, or admin can.
-      allow delete: if get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin'; // Only admin can delete users.
+      // Anyone can see basic profile info
+      allow read: if true;
+      // Only the owner or an admin can create/update their profile
+      allow create, update: if isAuth() && (isOwner(userId) || isAdmin());
+      // Only an admin can delete a user profile (for now)
+      allow delete: if isAdmin();
     }
 
-    // Secure reservations
     match /reservations/{reservationId} {
-      // User can only manage their own reservations.
-      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+        // A user can create a reservation for themselves.
+        allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+        // A user can only read or delete their own reservations.
+        allow read, delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
     
-    // Secure blocked users list - Only admins can manage this.
     match /blockedUsers/{blockedId} {
-      allow read, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+        // Only admins can manage the block list
+        allow read, create, update, delete: if isAdmin();
     }
   }
 }
