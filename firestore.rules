@@ -25,21 +25,20 @@ service cloud.firestore {
       allow delete: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // Admins can list all users.
     match /usuarios/{document=**} {
       allow list: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Reservations: Only authenticated users can access their own reservations.
+    // Reservations: Only authenticated users can access.
     match /reservations/{docId} {
-      allow read, create: if request.auth != null;
-      allow delete: if request.auth != null && (resource.data.userId == request.auth.uid || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
-      // Listing reservations is implicitly disallowed for non-admins by Firestore's query rules.
-      // A user can only query for reservations where their UID matches.
+      allow read, create, delete: if request.auth != null;
     }
 
     // Blocked Users: Only admins can access.
     match /blockedUsers/{docId} {
-      allow read, create, delete, list: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+      allow read, create, delete: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+      allow list: if request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
