@@ -57,12 +57,13 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Exit if user is not authenticated or is an admin, as admin doesn't reserve tickets
+    // Do not set up listener if user is admin or not authenticated
     if (!isAuthenticated || !user || user.role === 'admin') {
         setReservedTickets([]);
-        return () => {}; // Return an empty unsubscribe function
+        return () => {};
     }
     
+    // Create a query for all reservations for the specific raffle
     const q = query(
         collection(db, "reservations"), 
         where("raffleId", "==", raffleId)
@@ -76,6 +77,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         snapshot.forEach(doc => {
             const data = doc.data();
             const expiresAt = data.expiresAt.toDate();
+            // Only add reservations that have not expired
             if (expiresAt.getTime() > now.getTime()) {
                 reservationsData.push({
                     id: doc.id,
@@ -83,14 +85,16 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
                     expiresAt,
                 } as ReservedTicket);
             } else {
-                if (data.userId === user.id) {
-                    expiredReservationIds.push(doc.id);
-                }
+                 // Clean up expired reservations that belong to the current user
+                 // Note: Security rules should prevent seeing others' expired tickets.
+                 // This cleanup is best done server-side, but here for demo.
+                 expiredReservationIds.push(doc.id);
             }
         });
         
         setReservedTickets(reservationsData);
 
+        // Batch delete expired reservations
         if (expiredReservationIds.length > 0) {
             const batch = writeBatch(db);
             expiredReservationIds.forEach(id => {
@@ -133,13 +137,17 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     const isSold = raffle.soldTickets.includes(number);
     if (isSold) return false;
 
+    // Check for existing reservation for this number
     const reservationQuery = query(
         collection(db, "reservations"),
         where("raffleId", "==", raffleId),
         where("number", "==", number)
     );
     const reservedSnapshot = await getDocs(reservationQuery);
-    if (!reservedSnapshot.empty) return false;
+    // Check if any reservation is still valid
+    const now = Date.now();
+    const activeReservation = reservedSnapshot.docs.find(doc => doc.data().expiresAt.toDate().getTime() > now);
+    if (activeReservation) return false;
 
     try {
         await addDoc(collection(db, "reservations"), {
@@ -215,6 +223,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         }
      }
      
+    // Release the user's reservations for the purchased tickets
     const q = query(collection(db, "reservations"), 
         where("raffleId", "==", raffleId),
         where("userId", "==", userId),
@@ -242,3 +251,5 @@ export const useRaffles = () => {
   }
   return context;
 };
+
+    

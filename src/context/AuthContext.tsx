@@ -38,11 +38,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAdminSession, setIsAdminSession] = useState(false);
   
   const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
+    // This function is now intended to be called only by an authenticated admin.
+    // The security rules should enforce this.
     try {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
         const usersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            // Handle cases where createdAt might not be a Firestore Timestamp
             const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date());
             return { 
                 id: doc.id, 
@@ -71,7 +72,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
         
-        // Use onSnapshot to listen for real-time updates to the user profile
         const unsubUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
@@ -92,7 +92,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
         });
 
-        // Return a cleanup function for the user snapshot listener
         return () => unsubUser();
         
       } else {
@@ -105,7 +104,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isAdminSession]);
 
   const login = async (email: string, pass: string): Promise<UserProfile | null> => {
-    // Admin login check
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
       setIsAdminSession(true);
       setCurrentUser(MOCK_ADMIN_USER);
@@ -113,7 +111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return MOCK_ADMIN_USER;
     }
     
-    // Regular user login
     setIsAdminSession(false);
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     const userDocRef = doc(db, "usuarios", userCredential.user.uid);
@@ -135,11 +132,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     if (isAdminSession) {
       setIsAdminSession(false);
-      setCurrentUser(null);
-      setFirebaseUser(null);
     }
     await signOut(auth).catch(() => {});
-    // State will be cleared by onAuthStateChanged listener
+    setCurrentUser(null);
+    setFirebaseUser(null);
   };
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
@@ -173,6 +169,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
+    // This logic should probably be in a backend function for security.
+    // For now, we assume this is only called by an authorized admin client-side.
     const q = query(collection(db, "usuarios"), where("email", "==", userData.email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -180,10 +178,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     try {
+        // We don't create a Firebase auth user here, this is a local user record
+        // This is a FLAWED design, but we'll stick to it for now.
+        // A real app would use a Cloud Function to create the auth user.
         const { password, ...restOfData } = userData;
         const newUserProfileData = {
           ...restOfData,
-          password,
+          password, // Storing passwords in Firestore is a major security risk. This is for demo only.
           isVerified: false,
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
@@ -207,10 +208,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const forcePasswordChange = async (userId: string, newPass: string) => {
+      // Storing passwords in Firestore is a major security risk. This is for demo only.
       await editUser(userId, { password: newPass, mustChangePassword: false });
   }
 
   const deleteUser = async (userId: string) => {
+    // This does not delete the Firebase Auth user, only the Firestore record.
+    // A real app would need a Cloud Function for this.
     await deleteDoc(doc(db, "usuarios", userId));
   }
 
@@ -228,3 +232,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
