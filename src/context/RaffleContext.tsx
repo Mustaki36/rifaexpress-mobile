@@ -6,7 +6,6 @@ import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimest
 import { db } from '@/lib/firebase';
 import type { Raffle, ReservedTicket } from '@/lib/types';
 import { useAuth } from './AuthContext';
-import { MOCK_RAFFLES, MOCK_TACOS_USER, MOCK_USER } from '@/lib/data';
 
 const RESERVATION_TIME_MS = 5 * 60 * 1000;
 
@@ -26,42 +25,6 @@ interface RaffleContextType {
 
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
-// Helper function to seed the database
-const seedDatabase = async () => {
-    console.log("Seeding database with initial raffles...");
-    const batch = writeBatch(db);
-    
-    // Check if users exist before creating raffles, if not, create them
-    const user1Doc = await getDoc(doc(db, "usuarios", MOCK_USER.id));
-    if (!user1Doc.exists()) {
-        const { id, ...userData } = MOCK_USER;
-        batch.set(doc(db, "usuarios", id), { ...userData, createdAt: serverTimestamp() });
-    }
-    
-    const user2Doc = await getDoc(doc(db, "usuarios", MOCK_TACOS_USER.id));
-    if (!user2Doc.exists()) {
-        const { id, ...userData } = MOCK_TACOS_USER;
-        batch.set(doc(db, "usuarios", id), { ...userData, createdAt: serverTimestamp() });
-    }
-
-    MOCK_RAFFLES.forEach(raffle => {
-        const { id, ...raffleData } = raffle;
-        const raffleRef = doc(db, "raffles", id);
-        batch.set(raffleRef, {
-            ...raffleData,
-            createdAt: serverTimestamp(),
-            status: 'open',
-        });
-    });
-
-    try {
-        await batch.commit();
-        console.log("Database seeded successfully!");
-    } catch (error) {
-        console.error("Error seeding database:", error);
-    }
-};
-
 export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
@@ -73,25 +36,17 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
     
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-      console.log('%c[RaffleContext] Conexión establecida y datos recibidos de Firestore (colección "raffles").', 'color: #4CAF50; font-weight: bold;');
-      
-      // Seed database if it's empty
-      if (querySnapshot.empty) {
-          await seedDatabase();
-          // The listener will pick up the newly added data automatically.
-      } else {
-          const rafflesData = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              ...data,
-              drawDate: data.drawDate.toDate(),
-              soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
-            } as Raffle;
-          });
-          setRaffles(rafflesData);
-          setLoading(false);
-      }
+      const rafflesData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          drawDate: data.drawDate.toDate(),
+          soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
+        } as Raffle;
+      });
+      setRaffles(rafflesData);
+      setLoading(false);
     }, (error) => {
       console.error("Error fetching raffles: ", error);
       setLoading(false);
@@ -293,5 +248,4 @@ export const useRaffles = () => {
   }
   return context;
 };
-
     
