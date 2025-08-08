@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Pencil, Trash2, Search, PlusCircle, ShieldCheck, ShieldX, Info } from "lucide-react";
+import { MoreHorizontal, Pencil, Search, PlusCircle, ShieldCheck, ShieldX, Info, UserX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,15 +46,16 @@ import { useBlock } from "@/context/BlockContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { cn } from "@/lib/utils";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { user, addUser, deleteUser, editUser } = useAuth();
+  const { user, suspendUser } = useAuth();
   const { blockUser } = useBlock();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+  const [userToSuspend, setUserToSuspend] = useState<UserProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
@@ -63,7 +64,6 @@ export function UsersList() {
   const [error, setError] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
-    // This check is a safeguard, but the real security is in Firestore rules.
     if (user?.role !== 'admin') { 
         setError("No tienes permiso para ver esta sección.");
         setUsers([]);
@@ -93,28 +93,32 @@ export function UsersList() {
   }, [user]);
 
   useEffect(() => {
-    if (user) { // Only load users if the main user context is available
+    if (user) {
       loadUsers();
     }
   }, [user, loadUsers]);
   
-  const getRoleDisplayName = (role: 'regular' | 'creator' | 'admin') => {
+  const getRoleDisplayName = (role: UserProfile['role']) => {
     switch (role) {
       case 'admin':
         return 'Administrador';
       case 'creator':
         return 'Creador';
+      case 'suspended':
+          return 'Suspendido';
       default:
         return 'Regular';
     }
   };
   
-  const getRoleVariant = (role: 'regular' | 'creator' | 'admin'): "default" | "secondary" | "destructive" => {
+  const getRoleVariant = (role: UserProfile['role']): "default" | "secondary" | "destructive" => {
     switch (role) {
       case 'admin':
         return 'destructive';
       case 'creator':
         return 'default';
+       case 'suspended':
+          return 'destructive';
       default:
         return 'secondary';
     }
@@ -128,8 +132,8 @@ export function UsersList() {
     );
   }, [searchTerm, users]);
 
-  const confirmDelete = (user: UserProfile) => {
-    setUserToDelete(user);
+  const confirmSuspend = (user: UserProfile) => {
+    setUserToSuspend(user);
     setIsAlertOpen(true);
   };
   
@@ -138,27 +142,27 @@ export function UsersList() {
     setIsEditUserOpen(true);
   }
 
-  const handleDelete = async () => {
-    if (userToDelete) {
-      if(userToDelete.role === 'admin') {
+  const handleSuspend = async () => {
+    if (userToSuspend) {
+      if(userToSuspend.role === 'admin') {
          toast({
             variant: "destructive",
             title: "Acción no permitida",
-            description: "No se puede eliminar una cuenta de administrador.",
+            description: "No se puede suspender una cuenta de administrador.",
           });
           setIsAlertOpen(false);
-          setUserToDelete(null);
+          setUserToSuspend(null);
           return;
       }
-      await deleteUser(userToDelete.id);
+      await suspendUser(userToSuspend.id);
       toast({
-        title: "Usuario eliminado",
-        description: `El usuario ${userToDelete.name} ha sido eliminado.`,
+        title: "Usuario suspendido",
+        description: `El usuario ${userToSuspend.name} ha sido suspendido. No podrá iniciar sesión.`,
       });
       loadUsers(); // Recargar usuarios
     }
     setIsAlertOpen(false);
-    setUserToDelete(null);
+    setUserToSuspend(null);
   };
 
   const handleBlockUser = (user: UserProfile) => {
@@ -170,12 +174,12 @@ export function UsersList() {
   }
   
   const handleAddUser = async (values: any) => {
-      await addUser(values);
+      await useAuth().addUser(values);
       loadUsers(); // Recargar usuarios
   }
   
   const handleEditUser = async (userId: string, values: any) => {
-      await editUser(userId, values);
+      await useAuth().editUser(userId, values);
       loadUsers(); // Recargar usuarios
   }
 
@@ -238,7 +242,7 @@ export function UsersList() {
                         </TableCell>
                     </TableRow>
                 ) : filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} className={cn(user.role === 'suspended' && 'text-muted-foreground opacity-60')}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
@@ -255,7 +259,7 @@ export function UsersList() {
                     <TableCell className="text-right">
                        <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={user.role === 'suspended'}>
                               <span className="sr-only">Abrir menú</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -265,13 +269,13 @@ export function UsersList() {
                                 <Pencil className="mr-2 h-4 w-4" />
                                 <span>Editar</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => confirmDelete(user)} className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Eliminar</span>
+                            <DropdownMenuItem onClick={() => confirmSuspend(user)} className="text-destructive">
+                                <UserX className="mr-2 h-4 w-4" />
+                                <span>Suspender</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleBlockUser(user)} className="text-destructive">
                                 <ShieldX className="mr-2 h-4 w-4" />
-                                <span>Bloquear</span>
+                                <span>Bloquear Email</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -290,14 +294,14 @@ export function UsersList() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Suspender a {userToSuspend?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario y todos sus datos.
+              Esta acción impedirá que el usuario inicie sesión en la plataforma. Podrás revertir su rol más tarde si es necesario.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+            <AlertDialogAction onClick={handleSuspend} className="bg-destructive hover:bg-destructive/90">Suspender</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

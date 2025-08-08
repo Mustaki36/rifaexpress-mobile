@@ -1,9 +1,10 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // HELPER FUNCTIONS
+  
+    // Helper functions
     function isAuth() {
       return request.auth != null;
     }
@@ -11,47 +12,76 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuth() && request.auth.uid == userId;
     }
-
-    // RULES FOR USERS
-    match /usuarios/{userId} {
-      allow read: if isAuth();
-      allow create: if isAuth(); // Allows signup
-      allow update: if isOwner(userId) && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'address', 'avatar', 'tickets', 'mustChangePassword', 'password', 'role', 'isVerified', 'createdAt']);
-      allow delete: if false; // Users cannot delete their own accounts from the client
+    
+    function isRole(role) {
+        return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == role;
     }
 
-    // RULES FOR RAFFLES
+    function isAdmin() {
+        return isAuth() && isRole('admin');
+    }
+    
+    function isNotSuspended() {
+      return isAuth() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role != 'suspended';
+    }
+
+    // Collection: raffles
     match /raffles/{raffleId} {
-      allow read: if true; // Anyone can see the raffles
-      allow create: if isAuth(); // Only authenticated users (logic in app limits to creator/admin)
-      
-      // Allow updates if the user is authenticated and only specific fields are being changed.
-      // This allows ticket purchases (updating soldTickets) and edits by creators.
-      allow update: if isAuth() && request.resource.data.keys().hasOnly(['soldTickets', 'status', 'title', 'description', 'prize', 'image', 'aiHint', 'drawDate', 'totalTickets', 'ticketPrice', 'creatorId', 'createdAt']);
-      
-      allow delete: if isAuth(); // Logic in app limits to creator/admin
+        allow read: if true;
+        
+        allow create: if isNotSuspended() && (isRole('creator') || isAdmin());
+        
+        // Allow users to buy tickets (update soldTickets)
+        // Allow creators to edit their own raffles
+        // Allow admins to edit any raffle
+        allow update: if isNotSuspended() && 
+                      (
+                        (
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                            'soldTickets', 'status', 'title', 'description', 
+                            'prize', 'image', 'aiHint', 'drawDate'
+                           ])
+                        ) &&
+                        (isOwner(resource.data.creatorId) || isAdmin())
+                      );
+                      
+        allow delete: if isNotSuspended() && (isOwner(resource.data.creatorId) || isAdmin());
     }
-
-    // RULES FOR RESERVATIONS
+    
+    // Collection: reservations
     match /reservations/{reservationId} {
-      // Users can only see their own reservations, but the query needs to be able to scan.
-      // The query in the app is now specific enough to only ask for the user's own reservations.
-      allow list, read: if isAuth() && resource.data.userId == request.auth.uid;
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+      allow list: if isNotSuspended(); 
+      allow read, delete: if isNotSuspended() && isOwner(resource.data.userId);
+      allow create: if isNotSuspended() && isOwner(request.resource.data.userId);
     }
-
-    // RULES FOR RESULTS
+    
+    // Collection: users
+    match /usuarios/{userId} {
+      allow read: if true;
+      allow create: if true; // Signup
+      
+      // Allow users to update their own profiles
+      // Allow admins to update any profile
+      allow update: if isNotSuspended() && 
+                    (
+                      isOwner(userId) || isAdmin()
+                    );
+                    
+      // Only admins can delete user documents
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: results
     match /results/{resultId} {
-      allow read: if true; // Anyone can see results
-      allow create, update, delete: if false; // Should only be created by a secure backend/admin tool
+      allow read: if true;
+      // Only admins can create or delete results
+      allow create, delete: if isAdmin();
     }
-
-    // RULES FOR BLOCKED USERS
+    
+    // Collection: blockedUsers
     match /blockedUsers/{blockedId} {
-       // Only admins should interact with this collection, which should be enforced by app logic.
-       // For maximum security, these rules are restrictive. A real app would use custom claims for admins.
-       allow read, create, update, delete: if isAuth();
+       // Only admins can manage the block list
+      allow read, create, update, delete: if isAdmin();
     }
   }
 }

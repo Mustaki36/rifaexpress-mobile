@@ -43,7 +43,7 @@ export type UserProfile = {
   address?: Address;
   isVerified: boolean;
   avatar: string;
-  role: 'regular' | 'creator' | 'admin';
+  role: 'regular' | 'creator' | 'admin' | 'suspended';
   createdAt: Date | Timestamp;
   mustChangePassword?: boolean;
   tickets: {

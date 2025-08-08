@@ -33,7 +33,7 @@ import { Separator } from "@/components/ui/separator";
 const formSchema = z.object({
   name: z.string().min(2, "El nombre es requerido."),
   email: z.string().email("Debe ser un email válido."),
-  role: z.enum(["regular", "creator", "admin"], {
+  role: z.enum(["regular", "creator", "admin", "suspended"], {
     required_error: "Debes seleccionar un rol.",
   }),
 });
@@ -72,7 +72,7 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
     if (!user) return;
     
     // Prevent changing the main admin's role
-    if (user.id === 'admin-user-id' && values.role !== 'admin') {
+    if (user.role === 'admin' && user.id === 'firebase-admin-user-id' && values.role !== 'admin') {
          toast({
             variant: "destructive",
             title: "Acción no permitida",
@@ -146,7 +146,7 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
                         <RadioGroup
                         onValueChange={field.onChange}
                         value={field.value}
-                        className="flex space-x-4"
+                        className="grid grid-cols-2 gap-4"
                         >
                         <FormItem className="flex items-center space-x-2 space-y-0">
                             <FormControl>
@@ -159,6 +159,18 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
                             <RadioGroupItem value="creator" />
                             </FormControl>
                             <FormLabel className="font-normal">Creador</FormLabel>
+                        </FormItem>
+                         <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="admin" />
+                            </FormControl>
+                            <FormLabel className="font-normal">Admin</FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="suspended" />
+                            </FormControl>
+                            <FormLabel className="font-normal text-destructive">Suspendido</FormLabel>
                         </FormItem>
                         </RadioGroup>
                     </FormControl>
