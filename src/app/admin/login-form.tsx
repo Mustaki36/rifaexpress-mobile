@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { KeyRound, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email("Debe ser un email válido."),
@@ -34,6 +35,7 @@ const formSchema = z.object({
 export function AdminLoginForm() {
   const { toast } = useToast();
   const { login } = useAuth();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -61,8 +63,9 @@ export function AdminLoginForm() {
             toast({
                 variant: "destructive",
                 title: "Acceso Denegado",
-                description: "Credenciales de administrador incorrectas o el usuario no es administrador.",
-            })
+                description: "No tienes permisos de administrador.",
+            });
+            router.push('/');
         }
     } catch (error) {
          toast({

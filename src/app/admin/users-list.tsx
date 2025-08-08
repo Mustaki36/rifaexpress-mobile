@@ -44,11 +44,12 @@ import { AddUserDialog } from "./add-user-dialog";
 import { EditUserSheet } from "./edit-user-sheet";
 import { useBlock } from "@/context/BlockContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { MOCK_USER } from "@/lib/data";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { user, addUser, deleteUser, editUser, fetchAllUsers } = useAuth();
+  const { user, addUser, deleteUser, editUser } = useAuth();
   const { blockUser } = useBlock();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -62,28 +63,40 @@ export function UsersList() {
   const [error, setError] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
-    // Only fetch if the user is a real admin authenticated via Firebase
-    if (user?.role === 'admin' && user.id !== 'admin-user-id') { 
-        setIsLoading(true);
-        setError(null);
-        try {
-            const userList = await fetchAllUsers();
-            setUsers(userList);
-        } catch (e) {
-            console.error(e);
-            setError("No se pudieron cargar los usuarios. Revisa los permisos de Firestore.");
-        } finally {
-            setIsLoading(false);
-        }
-    } else {
-        // For the mock admin, we use mock data.
-        setUsers([MOCK_USER]);
+    // This check is a safeguard, but the real security is in Firestore rules.
+    if (user?.role !== 'admin') { 
+        setError("No tienes permiso para ver esta sección.");
+        setUsers([]);
+        return;
     }
-  }, [user, fetchAllUsers]);
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+        const querySnapshot = await getDocs(collection(db, "usuarios"));
+        const userList = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date());
+            return { 
+                id: doc.id, 
+                ...data,
+                createdAt: createdAt
+            } as UserProfile;
+        });
+        setUsers(userList);
+    } catch (e) {
+        console.error("Error fetching users: ", e);
+        setError("No se pudieron cargar los usuarios. Verifica los permisos de Firestore y las reglas de seguridad.");
+    } finally {
+        setIsLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    if (user) { // Only load users if the main user context is available
+      loadUsers();
+    }
+  }, [user, loadUsers]);
   
   const getRoleDisplayName = (role: 'regular' | 'creator' | 'admin') => {
     switch (role) {
@@ -127,7 +140,7 @@ export function UsersList() {
 
   const handleDelete = async () => {
     if (userToDelete) {
-      if(userToDelete.id === 'admin-user-id' || userToDelete.role === 'admin') {
+      if(userToDelete.role === 'admin') {
          toast({
             variant: "destructive",
             title: "Acción no permitida",
@@ -193,15 +206,6 @@ export function UsersList() {
             </div>
         </CardHeader>
         <CardContent>
-           {user?.id === 'admin-user-id' && (
-             <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertTitle className="text-blue-800">Vista de Demostración</AlertTitle>
-                <AlertDescription className="text-blue-700">
-                    Estás viendo una lista de ejemplo. Para gestionar usuarios reales, inicia sesión con una cuenta de administrador creada en Firebase.
-                </AlertDescription>
-             </Alert>
-           )}
            {error && (
              <Alert variant="destructive" className="mb-4">
                 <AlertTitle>Error de Carga</AlertTitle>
@@ -226,6 +230,12 @@ export function UsersList() {
                 {isLoading ? (
                     <TableRow>
                         <TableCell colSpan={6} className="text-center h-24">Cargando usuarios...</TableCell>
+                    </TableRow>
+                ) : filteredUsers.length === 0 && !error ? (
+                     <TableRow>
+                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                            No se encontraron usuarios.
+                        </TableCell>
                     </TableRow>
                 ) : filteredUsers.map((user) => (
                   <TableRow key={user.id}>

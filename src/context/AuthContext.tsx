@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { 
     onAuthStateChanged, 
     createUserWithEmailAndPassword, 
@@ -9,15 +9,14 @@ import {
     signOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, addDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
-import { MOCK_ADMIN_USER } from '@/lib/data';
+import { useBlock } from './BlockContext';
 
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: FirebaseUser | null;
-  fetchAllUsers: () => Promise<UserProfile[]>;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, pass: string) => Promise<UserProfile | null>;
@@ -35,45 +34,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdminSession, setIsAdminSession] = useState(false);
-  
-  const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
-    // This function is now intended to be called only by an authenticated admin.
-    // The security rules should enforce this.
-    if (!currentUser || currentUser.role !== 'admin') {
-      console.warn("Attempted to fetch all users without admin privileges.");
-      return [];
-    }
-    
-    // NOTE: This will fail if the Firestore rules don't allow it.
-    // This is a known issue for the mock admin user.
-    try {
-        const querySnapshot = await getDocs(collection(db, "usuarios"));
-        const usersList = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date());
-            return { 
-                id: doc.id, 
-                ...data,
-                createdAt: createdAt
-            } as UserProfile
-        });
-        return usersList;
-    } catch (error) {
-        console.error("Error fetching users: ", error);
-        return [];
-    }
-  }, [currentUser]);
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('%c[AuthContext] Conexión establecida con Firebase Authentication.', 'color: #4CAF50; font-weight: bold;');
       setLoading(true);
-      if (isAdminSession) {
-          setLoading(false);
-          return;
-      }
       
       setFirebaseUser(user);
       if (user) {
@@ -108,17 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     
     return () => unsubscribe();
-  }, [isAdminSession]);
+  }, []);
 
   const login = async (email: string, pass: string): Promise<UserProfile | null> => {
-    if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
-      setIsAdminSession(true);
-      setCurrentUser(MOCK_ADMIN_USER);
-      setFirebaseUser(null); 
-      return MOCK_ADMIN_USER;
-    }
-    
-    setIsAdminSession(false);
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     const userDocRef = doc(db, "usuarios", userCredential.user.uid);
     const userDocSnap = await getDoc(userDocRef);
@@ -137,17 +94,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    if (isAdminSession) {
-      setIsAdminSession(false);
-    }
-    await signOut(auth).catch(() => {});
+    await signOut(auth);
     setCurrentUser(null);
     setFirebaseUser(null);
   };
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
     try {
-        setIsAdminSession(false);
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
         const user = userCredential.user;
         
@@ -226,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, fetchAllUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );
@@ -239,5 +192,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
