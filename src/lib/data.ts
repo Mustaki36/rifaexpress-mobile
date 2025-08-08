@@ -48,3 +48,23 @@ export const MOCK_USER: UserProfile = {
     },
   ],
 };
+
+export const MOCK_TACOS_USER: UserProfile = {
+  id: 'user-tacos',
+  name: 'Tacos Place',
+  email: 'lostacosplace@gmail.com',
+  password: 'passwordtacos',
+  isVerified: true,
+  phone: '555-123-4567',
+  address: {
+    street: "456 Taco Street",
+    city: "Mexico City",
+    state: "CDMX",
+    postalCode: "06000",
+    country: "Mexico"
+  },
+  avatar: 'https://placehold.co/100x100.png?text=T',
+  role: 'creator',
+  createdAt: new Date('2024-03-20T12:00:00'),
+  tickets: [],
+};
