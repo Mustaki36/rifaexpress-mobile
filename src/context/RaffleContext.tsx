@@ -28,7 +28,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
 
   // Listener for raffles collection
   useEffect(() => {
@@ -58,12 +58,13 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   
   // Listener for reservations collection - ONLY for authenticated users
   useEffect(() => {
-      // If there's no user, don't even try to listen.
-      if (!user) {
-          setReservedTickets([]); // Clear any stale reservations
+      // Si el usuario no está autenticado, no intentamos escuchar y limpiamos el estado.
+      if (!isAuthenticated) {
+          setReservedTickets([]);
           return;
       }
 
+      // Si el usuario está autenticado, establecemos el listener.
       const q = query(collection(db, "reservations"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
           const now = new Date();
@@ -86,7 +87,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
 
           setReservedTickets(reservationsData);
 
-          // Clean up expired reservations in Firestore
+          // Limpiamos las reservaciones expiradas
           if (expiredReservationIds.length > 0) {
               const batch = writeBatch(db);
               expiredReservationIds.forEach(id => {
@@ -95,15 +96,13 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
               batch.commit().catch(err => console.error("Failed to delete expired reservations:", err));
           }
       }, (error) => {
-          // This will catch permission errors if rules are misconfigured,
-          // but our check for `user` should prevent this.
-          console.error("Error fetching reservations:", error);
+          console.error("Error fetching reservations (permission issue likely):", error);
           setReservedTickets([]);
       });
       
-      // Cleanup the listener when the user logs out or component unmounts
+      // La función de limpieza se ejecuta cuando el usuario se desloguea o el componente se desmonta.
       return () => unsubscribe();
-  }, [user]); // Re-run this effect when the user's auth state changes
+  }, [isAuthenticated]); // El efecto se ejecuta solo cuando cambia el estado de autenticación.
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
@@ -129,12 +128,10 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     const raffle = raffles.find(r => r.id === raffleId);
     if (!raffle) return false;
     
-    // Double check against local state first for quick feedback
     const isSold = raffle.soldTickets.includes(number);
     const isReserved = reservedTickets.some(t => t.raffleId === raffleId && t.number === number);
     if (isSold || isReserved) return false;
 
-    // Proceed to create reservation in Firestore
     try {
         await addDoc(collection(db, "reservations"), {
             raffleId,
@@ -145,7 +142,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         return true;
     } catch (error) {
         console.error("Error reserving ticket in Firestore:", error);
-        // This might fail due to security rules if a reservation already exists (needs configuration)
         return false;
     }
   };
