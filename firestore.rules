@@ -1,87 +1,62 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper functions
+
     function isAuth() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
-      return isAuth() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
-    
-    function isRole(role) {
-        return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == role;
+
+    function getRole() {
+      // Check if the user document exists before trying to access its data.
+      return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role : '';
     }
 
     function isAdmin() {
-        return isAuth() && isRole('admin');
-    }
-    
-    function isNotSuspended() {
-      return isAuth() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role != 'suspended';
+      return isAuth() && getRole() == 'admin';
     }
 
-    // Collection: raffles
+    // Allow admins to read/write anything
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
     match /raffles/{raffleId} {
-        allow read: if true;
-        
-        allow create: if isNotSuspended() && (isRole('creator') || isAdmin());
-        
-        // Allow users to buy tickets (update soldTickets)
-        // Allow creators to edit their own raffles
-        // Allow admins to edit any raffle
-        allow update: if isNotSuspended() && 
-                      (
-                        (
-                          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                            'soldTickets', 'status', 'title', 'description', 
-                            'prize', 'image', 'aiHint', 'drawDate'
-                           ])
-                        ) &&
-                        (isOwner(resource.data.creatorId) || isAdmin())
-                      );
-                      
-        allow delete: if isNotSuspended() && (isOwner(resource.data.creatorId) || isAdmin());
-    }
-    
-    // Collection: reservations
-    match /reservations/{reservationId} {
-      allow list: if isNotSuspended(); 
-      allow read, delete: if isNotSuspended() && isOwner(resource.data.userId);
-      allow create: if isNotSuspended() && isOwner(request.resource.data.userId);
-    }
-    
-    // Collection: users
-    match /usuarios/{userId} {
       allow read: if true;
-      allow create: if true; // Signup
-      
-      // Allow users to update their own profiles
-      // Allow admins to update any profile
-      allow update: if isNotSuspended() && 
-                    (
-                      isOwner(userId) || isAdmin()
-                    );
-                    
-      // Only admins can delete user documents
+      allow create: if isAuth() && (request.resource.data.creatorId == request.auth.uid || isAdmin());
+      // Allow update if user is the creator/admin, or if they are only adding to soldTickets (buying a ticket)
+      allow update: if isAuth() && (
+        (resource.data.creatorId == request.auth.uid || isAdmin()) ||
+        (request.resource.data.keys().hasAll(['soldTickets']) && request.resource.data.soldTickets.size() > resource.data.soldTickets.size())
+      );
+      allow delete: if isAuth() && (resource.data.creatorId == request.auth.uid || isAdmin());
+    }
+
+    match /usuarios/{userId} {
+      allow read: if isAuth();
+      allow create: if isAdmin(); // Fix: Allow admins to create user documents.
+      allow update: if isOwner(userId);
       allow delete: if isAdmin();
     }
-    
-    // Collection: results
+
+    match /reservations/{reservationId} {
+      allow list, read: if isAuth();
+      allow create, delete: if isAuth() && request.resource.data.userId == request.auth.uid;
+    }
+
     match /results/{resultId} {
-      allow read: if true;
-      // Only admins can create or delete results
-      allow create, delete: if isAdmin();
+        allow read: if true;
+        allow create, delete: if isAdmin();
     }
     
-    // Collection: blockedUsers
     match /blockedUsers/{blockedId} {
-       // Only admins can manage the block list
-      allow read, create, update, delete: if isAdmin();
+        allow read, list, create, update, delete: if isAdmin();
     }
   }
 }
+
+    
