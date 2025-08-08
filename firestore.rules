@@ -1,35 +1,47 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Las rifas son públicas para lectura, pero solo los usuarios autenticados pueden modificarlas.
+
+    // Allow public read access for raffles and results
     match /raffles/{raffleId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null; // Must be logged in to create
+      // Only creator or admin can update.
+      allow update: if request.auth != null && (resource.data.creatorId == request.auth.uid || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
+      // Only creator or admin can delete
+      allow delete: if request.auth != null && (resource.data.creatorId == request.auth.uid || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin');
     }
-
-    // Los resultados son públicos para lectura, pero solo los usuarios autenticados (admins) pueden escribir.
-    // Simplificamos por ahora a cualquier usuario autenticado.
+    
     match /results/{resultId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      // Only admins should be able to write/delete results (handled by backend functions not client)
+      allow write: if get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Las reservaciones de boletos solo pueden ser leídas y modificadas por el usuario que las creó.
-    match /reservations/{reservationId} {
-      allow read, create, delete: if request.auth.uid == request.resource.data.userId;
-    }
-
-    // Los perfiles de usuario solo pueden ser leídos por cualquiera, pero solo modificados por su dueño.
+    // Users can only read/write their own data, except for admins.
     match /usuarios/{userId} {
-      allow read: if true;
-      allow create: if request.auth.uid == userId;
-      allow update, delete: if request.auth.uid == userId;
+      // Allow user to read their own data OR if user is an admin
+      allow read: if request.auth.uid == userId || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+       // Allow user to update their own data OR if user is an admin
+      allow update, create: if request.auth.uid == userId || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+      // Allow user to delete their own account OR if user is an admin
+      allow delete: if request.auth.uid == userId || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Admins can read the full list of users
+    match /usuarios/{document=**} {
+        allow list: if get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // La lista de usuarios bloqueados solo puede ser leída o modificada por usuarios autenticados (admins).
-    // Simplificamos por ahora a cualquier usuario autenticado.
-    match /blockedUsers/{userId} {
+    // Reservations can only be created/deleted by authenticated users.
+    match /reservations/{reservationId} {
         allow read, write: if request.auth != null;
+    }
+
+    // Only admins should be able to see and manage the block list.
+    match /blockedUsers/{blockId} {
+      allow read, write, delete: if get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
