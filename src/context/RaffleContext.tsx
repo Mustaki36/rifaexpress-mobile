@@ -57,13 +57,13 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Do not set up listener if user is admin or not authenticated
-    if (!isAuthenticated || !user || user.role === 'admin') {
+    // Listener should only be active for authenticated users.
+    // Firestore security rules will handle what data they can see.
+    if (!isAuthenticated) {
         setReservedTickets([]);
         return () => {};
     }
     
-    // Create a query for all reservations for the specific raffle
     const q = query(
         collection(db, "reservations"), 
         where("raffleId", "==", raffleId)
@@ -77,7 +77,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         snapshot.forEach(doc => {
             const data = doc.data();
             const expiresAt = data.expiresAt.toDate();
-            // Only add reservations that have not expired
             if (expiresAt.getTime() > now.getTime()) {
                 reservationsData.push({
                     id: doc.id,
@@ -85,16 +84,12 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
                     expiresAt,
                 } as ReservedTicket);
             } else {
-                 // Clean up expired reservations that belong to the current user
-                 // Note: Security rules should prevent seeing others' expired tickets.
-                 // This cleanup is best done server-side, but here for demo.
                  expiredReservationIds.push(doc.id);
             }
         });
         
         setReservedTickets(reservationsData);
 
-        // Batch delete expired reservations
         if (expiredReservationIds.length > 0) {
             const batch = writeBatch(db);
             expiredReservationIds.forEach(id => {
@@ -108,7 +103,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return unsubscribe;
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]);
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
