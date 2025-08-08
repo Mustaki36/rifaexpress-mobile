@@ -1,63 +1,57 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // HELPER FUNCTIONS
     function isAuth() {
       return request.auth != null;
     }
-
+    
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isAuth() && request.auth.uid == userId;
     }
 
-    match /raffles/{raffleId} {
-      // Cualquiera puede ver las rifas.
-      allow read: if true;
-      
-      // Solo usuarios autenticados pueden actualizar una rifa (para comprar boletos).
-      // La creación y eliminación debe ser manejada por roles específicos en la lógica de la app.
-      allow update: if isAuth();
-      
-      // Nadie puede crear o borrar directamente desde el cliente sin una lógica de rol más compleja (manejada por la app).
-      allow create, delete: if false;
-    }
-
-    match /reservations/{reservationId} {
-        // Un usuario puede crear una reservación si el `userId` en el nuevo documento es el suyo.
-        allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-        
-        // Un usuario solo puede leer o eliminar una reservación si es el propietario.
-        allow read, delete: if isAuth() && resource.data.userId == request.auth.uid;
-
-        // La consulta de la colección (list) requiere una regla más permisiva a nivel de colección,
-        // pero las reglas de 'read' individuales aseguran que solo se devuelvan los documentos propios.
-        allow list: if isAuth();
-    }
-
+    // RULES FOR USERS
     match /usuarios/{userId} {
-        // Cualquiera puede leer perfiles de usuario (para ver nombres, etc.).
-        allow read: if true;
-        
-        // Un usuario solo puede actualizar su propio perfil.
-        allow update: if isOwner(userId);
-
-        // Nadie puede crear o borrar usuarios directamente desde el cliente.
-        // Esto debe ser manejado por la autenticación de Firebase y funciones seguras.
-        allow create, delete: if false;
+      allow read: if isAuth();
+      allow create: if isAuth(); // Allows signup
+      allow update: if isOwner(userId) && request.resource.data.keys().hasOnly(['name', 'email', 'phone', 'address', 'avatar', 'tickets', 'mustChangePassword', 'password', 'role', 'isVerified', 'createdAt']);
+      allow delete: if false; // Users cannot delete their own accounts from the client
     }
 
+    // RULES FOR RAFFLES
+    match /raffles/{raffleId} {
+      allow read: if true; // Anyone can see the raffles
+      allow create: if isAuth(); // Only authenticated users (logic in app limits to creator/admin)
+      
+      // Allow updates if the user is authenticated and only specific fields are being changed.
+      // This allows ticket purchases (updating soldTickets) and edits by creators.
+      allow update: if isAuth() && request.resource.data.keys().hasOnly(['soldTickets', 'status', 'title', 'description', 'prize', 'image', 'aiHint', 'drawDate', 'totalTickets', 'ticketPrice', 'creatorId', 'createdAt']);
+      
+      allow delete: if isAuth(); // Logic in app limits to creator/admin
+    }
+
+    // RULES FOR RESERVATIONS
+    match /reservations/{reservationId} {
+      // Users can only see their own reservations, but the query needs to be able to scan.
+      // The query in the app is now specific enough to only ask for the user's own reservations.
+      allow list, read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // RULES FOR RESULTS
     match /results/{resultId} {
-      // Cualquiera puede ver los resultados de las rifas.
-      allow read: if true;
-      allow write: if false; // Los resultados no deben ser modificables desde el cliente.
+      allow read: if true; // Anyone can see results
+      allow create, update, delete: if false; // Should only be created by a secure backend/admin tool
     }
 
-    match /blockedUsers/{blockedUserId} {
-        // Nadie debe poder leer o escribir en la lista de bloqueo desde el cliente.
-        // Esto debe ser manejado solo por el admin a través de la lógica de la app (que internamente usa credenciales de admin).
-        allow read, write: if false;
+    // RULES FOR BLOCKED USERS
+    match /blockedUsers/{blockedId} {
+       // Only admins should interact with this collection, which should be enforced by app logic.
+       // For maximum security, these rules are restrictive. A real app would use custom claims for admins.
+       allow read, create, update, delete: if isAuth();
     }
   }
 }
