@@ -1,13 +1,35 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permite acceso de lectura y escritura a todos los documentos
-    // para cualquier usuario autenticado. En un entorno de producción,
-    // querrás reglas más restrictivas.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Las rifas son públicas para lectura, pero solo los usuarios autenticados pueden modificarlas.
+    match /raffles/{raffleId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Los resultados son públicos para lectura, pero solo los usuarios autenticados (admins) pueden escribir.
+    // Simplificamos por ahora a cualquier usuario autenticado.
+    match /results/{resultId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Las reservaciones de boletos solo pueden ser leídas y modificadas por el usuario que las creó.
+    match /reservations/{reservationId} {
+      allow read, create, delete: if request.auth.uid == request.resource.data.userId;
+    }
+
+    // Los perfiles de usuario solo pueden ser leídos por cualquiera, pero solo modificados por su dueño.
+    match /usuarios/{userId} {
+      allow read: if true;
+      allow create: if request.auth.uid == userId;
+      allow update, delete: if request.auth.uid == userId;
+    }
+
+    // La lista de usuarios bloqueados solo puede ser leída o modificada por usuarios autenticados (admins).
+    // Simplificamos por ahora a cualquier usuario autenticado.
+    match /blockedUsers/{userId} {
+        allow read, write: if request.auth != null;
     }
   }
 }
