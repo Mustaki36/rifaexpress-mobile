@@ -3,7 +3,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RafflesList } from "./raffles-list";
-import { ListOrdered, Shield, LogOut, History, ShieldX } from "lucide-react";
+import { ListOrdered, Shield, LogOut, History, ShieldX, Users } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
 import { SecuritySettingsForm } from "./security-settings-form";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { HistoryList } from "./history-list";
 import { BlockedUsersList } from "./blocked-users-list";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { UsersList } from "./users-list";
 
 
 function AdminDashboard() {
@@ -51,10 +52,14 @@ function AdminDashboard() {
       </section>
 
       <Tabs defaultValue="manage" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-3xl mx-auto">
+        <TabsList className="grid w-full grid-cols-5 max-w-4xl mx-auto">
           <TabsTrigger value="manage">
             <ListOrdered className="mr-2" />
             Gestionar Rifas
+          </TabsTrigger>
+           <TabsTrigger value="users">
+            <Users className="mr-2" />
+            Usuarios
           </TabsTrigger>
           <TabsTrigger value="history">
             <History className="mr-2" />
@@ -71,6 +76,9 @@ function AdminDashboard() {
         </TabsList>
         <TabsContent value="manage">
             <RafflesList />
+        </TabsContent>
+         <TabsContent value="users">
+            <UsersList />
         </TabsContent>
         <TabsContent value="history">
             <HistoryList />
