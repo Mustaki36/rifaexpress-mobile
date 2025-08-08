@@ -131,19 +131,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!adminUser || !adminUser.email) {
         throw new Error("Administrador no ha iniciado sesión o no tiene email.");
     }
+
+    // Pre-check if email exists in Firestore
+    const usersRef = collection(db, "usuarios");
+    const q = query(usersRef, where("email", "==", userData.email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        throw new Error('Este correo electrónico ya está en uso. Por favor, utiliza otro.');
+    }
+    
     const adminEmail = adminUser.email;
     
-    // IMPORTANT: This is a hacky workaround for client-side user creation by an admin.
-    // The correct way is to use the Admin SDK in a Cloud Function.
-    // This flow will sign out the admin and sign in the new user, then attempt to sign the admin back in.
-    // It is not recommended for production environments.
-
     try {
-        // Create the new user account
         const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
         const newUser = userCredential.user;
         
-        // Prepare new user's profile data
         const newUserProfileData = {
           name: userData.name,
           email: userData.email,
@@ -151,19 +154,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isVerified: false,
           avatar: `https://placehold.co/100x100.png?text=${userData.name.charAt(0)}`,
           tickets: [],
-          mustChangePassword: true, // Force password change on first login
+          mustChangePassword: true, 
         };
 
-        // Create the user profile document in Firestore
         await setDoc(doc(db, "usuarios", newUser.uid), {
             ...newUserProfileData,
             createdAt: serverTimestamp(),
         });
         
-        // Sign out the newly created user
         await signOut(auth);
         
-        // Prompt admin to sign back in
         const adminPassword = prompt("Usuario creado exitosamente. Por favor, re-ingresa la contraseña de administrador para continuar:");
 
         if (adminPassword) {
@@ -175,7 +175,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
         console.error("Error adding user:", error);
         
-        // Try to re-authenticate admin if something failed, as they might have been signed out
         if (!auth.currentUser) {
              const adminPassword = prompt("Ocurrió un error. Por favor, re-ingresa la contraseña de administrador para continuar:");
              if (adminPassword) {
@@ -197,8 +196,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const deleteUser = async (userId: string) => {
-    // Note: This only deletes the Firestore document, not the Firebase Auth user.
-    // Deleting the Auth user requires the Admin SDK (e.g., in a Cloud Function).
     const userDocRef = doc(db, "usuarios", userId);
     await deleteDoc(userDocRef);
   };
@@ -209,12 +206,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      // In a real app, this would be a secure server-side operation.
-      // This is a mock implementation.
       const userDocRef = doc(db, "usuarios", userId);
       await updateDoc(userDocRef, {
         mustChangePassword: false,
-        // In a real app, you would not store the password here.
       });
   };
 
