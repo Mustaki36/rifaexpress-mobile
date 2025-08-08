@@ -26,7 +26,6 @@ interface AuthContextType {
   addUser: (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => Promise<void>;
   editUser: (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
-  isEmailBlocked: (email: string) => boolean;
   forcePasswordChange: (userId: string, newPass: string) => Promise<void>;
 }
 
@@ -36,25 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [blockedEmails, setBlockedEmails] = useState<string[]>([]);
   const [isAdminSession, setIsAdminSession] = useState(false);
-
-  // Fetch blocked users directly here to avoid context dependency issues
-  useEffect(() => {
-    // This listener should ideally only run for admins, but for simplicity
-    // in the login/signup flow, we fetch it once.
-    // A better approach would be Cloud Functions to enforce blocking.
-    const q = query(collection(db, "blockedUsers"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const emails = querySnapshot.docs.map(doc => doc.data().email as string);
-        setBlockedEmails(emails);
-    }, (error) => {
-        // This might fail for non-admins, which is fine. They won't have any blocked emails.
-        console.warn("Could not fetch blocked users list. This is expected for non-admins.", error.message);
-        setBlockedEmails([]);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
     try {
@@ -110,15 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [isAdminSession]);
 
-  const isEmailBlocked = (email: string) => {
-    return blockedEmails.includes(email);
-  }
-
   const login = async (email: string, pass: string): Promise<UserProfile | null> => {
-    if(isEmailBlocked(email)) {
-      throw new Error("Este email ha sido bloqueado.");
-    }
-    
     // Admin login check
     if (email === MOCK_ADMIN_USER.email && pass === MOCK_ADMIN_USER.password) {
       setIsAdminSession(true);
@@ -179,10 +152,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    if (isEmailBlocked(email)) {
-      throw new Error("Este email ha sido bloqueado y no puede ser usado para registrar una cuenta.");
-    }
-    
     try {
         setIsAdminSession(false);
         const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
@@ -213,10 +182,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addUser = async (userData: Omit<UserProfile, 'id' | 'avatar' | 'tickets' | 'createdAt' | 'isVerified' | 'mustChangePassword'> & { password: string }) => {
-     if (isEmailBlocked(userData.email)) {
-      throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
-    }
-    
     const q = query(collection(db, "usuarios"), where("email", "==", userData.email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -263,7 +228,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, fetchAllUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, isEmailBlocked, forcePasswordChange }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, fetchAllUsers, isAuthenticated: !!currentUser, loading, login, logout, signup, addUser, editUser, deleteUser, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );

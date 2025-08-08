@@ -53,7 +53,7 @@ const formSchema = z.object({
 type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
 
 export default function SignupPage() {
-  const { signup, isEmailBlocked } = useAuth();
+  const { signup } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -250,7 +250,7 @@ export default function SignupPage() {
     }
   }
 
-  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || isSubmitting || isEmailBlocked(emailValue);
+  const isSubmitDisabled = (isVerificationEnabled && idVerificationStatus !== 'success') || isSubmitting;
 
   return (
     <div className="container flex items-center justify-center py-12">
@@ -539,7 +539,7 @@ export default function SignupPage() {
 
               <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
                 {isSubmitting && <Loader2 className="mr-2 animate-spin" />}
-                {isEmailBlocked(emailValue) ? "Email Bloqueado" : "Crear Cuenta"}
+                Crear Cuenta
               </Button>
             </form>
           </Form>
