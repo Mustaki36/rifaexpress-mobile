@@ -26,12 +26,11 @@ interface RaffleContextType {
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
 export const RaffleProvider = ({ children }: { children: ReactNode }) => {
-  const [raffles, setRaffless] = useState<Raffle[]>([]);
+  const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
+  const { user, isAuthenticated } = useAuth();
 
-  // Listener for raffles collection
   useEffect(() => {
     setLoading(true);
     const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
@@ -47,7 +46,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
           soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
         } as Raffle;
       });
-      setRaffless(rafflesData);
+      setRaffles(rafflesData);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching raffles: ", error);
@@ -58,14 +57,12 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Only set up the listener if the user is authenticated.
-    if (!isAuthenticated || !user) {
+    // Exit if user is not authenticated or is an admin, as admin doesn't reserve tickets
+    if (!isAuthenticated || !user || user.role === 'admin') {
         setReservedTickets([]);
-        return () => {};
+        return () => {}; // Return an empty unsubscribe function
     }
     
-    // This query requires a composite index on (raffleId, userId)
-    // Firestore will provide a link in the console to create it.
     const q = query(
         collection(db, "reservations"), 
         where("raffleId", "==", raffleId)
@@ -78,30 +75,22 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
 
         snapshot.forEach(doc => {
             const data = doc.data();
-            // We can only read docs that comply with security rules.
-            // If the rule is `request.auth.uid == resource.data.userId`, then we only get our own.
-            // If the rule is `request.auth.uid == 'admin-id'`, we'd get all.
-            // The current rules allow any authenticated user to read, so we filter on client.
-             if (data.userId === user.id || user.role === 'admin') {
-                const expiresAt = data.expiresAt.toDate();
-                if (expiresAt.getTime() > now.getTime()) {
-                    reservationsData.push({
-                        id: doc.id,
-                        ...data,
-                        expiresAt,
-                    } as ReservedTicket);
-                } else {
-                    // Only the user who created it should delete it.
-                    if (data.userId === user.id) {
-                      expiredReservationIds.push(doc.id);
-                    }
+            const expiresAt = data.expiresAt.toDate();
+            if (expiresAt.getTime() > now.getTime()) {
+                reservationsData.push({
+                    id: doc.id,
+                    ...data,
+                    expiresAt,
+                } as ReservedTicket);
+            } else {
+                if (data.userId === user.id) {
+                    expiredReservationIds.push(doc.id);
                 }
-             }
+            }
         });
         
         setReservedTickets(reservationsData);
 
-        // Batch delete expired reservations for the current user
         if (expiredReservationIds.length > 0) {
             const batch = writeBatch(db);
             expiredReservationIds.forEach(id => {
@@ -141,11 +130,9 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     const raffle = raffles.find(r => r.id === raffleId);
     if (!raffle) return false;
     
-    // Check against local state first for quick feedback
     const isSold = raffle.soldTickets.includes(number);
     if (isSold) return false;
 
-    // Check remote reservations in a transaction to be sure
     const reservationQuery = query(
         collection(db, "reservations"),
         where("raffleId", "==", raffleId),
@@ -153,7 +140,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     );
     const reservedSnapshot = await getDocs(reservationQuery);
     if (!reservedSnapshot.empty) return false;
-
 
     try {
         await addDoc(collection(db, "reservations"), {
@@ -229,7 +215,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         }
      }
      
-     // Remove reservations for purchased tickets
     const q = query(collection(db, "reservations"), 
         where("raffleId", "==", raffleId),
         where("userId", "==", userId),

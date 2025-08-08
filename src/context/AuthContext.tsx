@@ -42,7 +42,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
         const usersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
-            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+            // Handle cases where createdAt might not be a Firestore Timestamp
+            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date());
             return { 
                 id: doc.id, 
                 ...data,
@@ -69,23 +70,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setFirebaseUser(user);
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
-          const userProfile = { 
-              id: user.uid, 
-              ...userData,
-              createdAt: createdAt
-          } as UserProfile;
-          setCurrentUser(userProfile);
-        } else {
-           setCurrentUser(null);
-        }
+        
+        // Use onSnapshot to listen for real-time updates to the user profile
+        const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
+                const userProfile = { 
+                    id: user.uid, 
+                    ...userData,
+                    createdAt: createdAt
+                } as UserProfile;
+                setCurrentUser(userProfile);
+            } else {
+               setCurrentUser(null);
+            }
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching user profile:", error);
+            setCurrentUser(null);
+            setLoading(false);
+        });
+
+        // Return a cleanup function for the user snapshot listener
+        return () => unsubUser();
+        
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
     
     return () => unsubscribe();
@@ -122,10 +135,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     if (isAdminSession) {
       setIsAdminSession(false);
+      setCurrentUser(null);
+      setFirebaseUser(null);
     }
     await signOut(auth).catch(() => {});
-    setCurrentUser(null);
-    setFirebaseUser(null);
+    // State will be cleared by onAuthStateChanged listener
   };
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
@@ -190,10 +204,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
     const userDocRef = doc(db, "usuarios", userId);
     await updateDoc(userDocRef, userData);
-    
-    if (currentUser?.id === userId) {
-        setCurrentUser(prev => prev ? { ...prev, ...userData } as UserProfile : null);
-    }
   };
 
   const forcePasswordChange = async (userId: string, newPass: string) => {
