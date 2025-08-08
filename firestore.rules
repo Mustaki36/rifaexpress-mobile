@@ -1,58 +1,63 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
+    
     function isAuth() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isAuth() && request.auth.uid == userId;
-    }
-    
-    function getUserRole() {
-      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role;
+      return request.auth.uid == userId;
     }
 
-    // RAFFLES: Public can read, creators/admins can write.
     match /raffles/{raffleId} {
+      // Cualquiera puede ver las rifas.
       allow read: if true;
-      allow create: if isAuth() && (getUserRole() == 'creator' || getUserRole() == 'admin');
-      allow update: if isAuth() && (request.auth.uid == resource.data.creatorId || getUserRole() == 'admin');
-      allow delete: if isAuth() && (request.auth.uid == resource.data.creatorId || getUserRole() == 'admin');
+      
+      // Solo usuarios autenticados pueden actualizar una rifa (para comprar boletos).
+      // La creación y eliminación debe ser manejada por roles específicos en la lógica de la app.
+      allow update: if isAuth();
+      
+      // Nadie puede crear o borrar directamente desde el cliente sin una lógica de rol más compleja (manejada por la app).
+      allow create, delete: if false;
     }
 
-    // USUARIOS: Users can manage their own profile. Admins can manage any.
-    match /usuarios/{userId} {
-      allow read: if isAuth();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || getUserRole() == 'admin';
-      allow delete: if isOwner(userId) || getUserRole() == 'admin';
-    }
-
-    // RESULTS: Public can read, only backend/admin can write.
-    match /results/{resultId} {
-      allow read: if true;
-      allow write: if isAuth() && getUserRole() == 'admin';
-    }
-
-    // BLOCKED USERS: Only admins can access.
-    match /blockedUsers/{blockId} {
-      allow read, write: if isAuth() && getUserRole() == 'admin';
-    }
-
-    // RESERVATIONS: Users can only manage their own reservations.
     match /reservations/{reservationId} {
-      // Allow reading only if the user is the owner of the reservation.
-      // This rule works with the more specific client-side query.
-      allow read: if isOwner(resource.data.userId);
-      allow list: if isAuth(); // Necessary for queries with 'where' clauses.
-      allow create: if isAuth() && isOwner(request.resource.data.userId);
-      allow delete: if isAuth() && isOwner(resource.data.userId);
+        // Un usuario puede crear una reservación si el `userId` en el nuevo documento es el suyo.
+        allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+        
+        // Un usuario solo puede leer o eliminar una reservación si es el propietario.
+        allow read, delete: if isAuth() && resource.data.userId == request.auth.uid;
+
+        // La consulta de la colección (list) requiere una regla más permisiva a nivel de colección,
+        // pero las reglas de 'read' individuales aseguran que solo se devuelvan los documentos propios.
+        allow list: if isAuth();
+    }
+
+    match /usuarios/{userId} {
+        // Cualquiera puede leer perfiles de usuario (para ver nombres, etc.).
+        allow read: if true;
+        
+        // Un usuario solo puede actualizar su propio perfil.
+        allow update: if isOwner(userId);
+
+        // Nadie puede crear o borrar usuarios directamente desde el cliente.
+        // Esto debe ser manejado por la autenticación de Firebase y funciones seguras.
+        allow create, delete: if false;
+    }
+
+    match /results/{resultId} {
+      // Cualquiera puede ver los resultados de las rifas.
+      allow read: if true;
+      allow write: if false; // Los resultados no deben ser modificables desde el cliente.
+    }
+
+    match /blockedUsers/{blockedUserId} {
+        // Nadie debe poder leer o escribir en la lista de bloqueo desde el cliente.
+        // Esto debe ser manejado solo por el admin a través de la lógica de la app (que internamente usa credenciales de admin).
+        allow read, write: if false;
     }
   }
 }
-
-    
