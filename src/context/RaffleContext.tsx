@@ -28,7 +28,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   const [raffles, setRaffles] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
+  const { isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
 
   // Listener for raffles collection
   useEffect(() => {
