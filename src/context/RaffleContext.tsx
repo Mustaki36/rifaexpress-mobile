@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, getDoc } from "firebase/firestore";
 import { db } from '@/lib/firebase';
 import type { Raffle, ReservedTicket } from '@/lib/types';
+import { useAuth } from './AuthContext';
 
 const RESERVATION_TIME_MS = 5 * 60 * 1000;
 
@@ -133,7 +134,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
 
      // Update user's ticket records in Firestore
      if (userId) {
-        const userDocRef = doc(db, "users", userId);
+        const userDocRef = doc(db, "usuarios", userId);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();

@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchAllUsers = useCallback(async () => {
     try {
-        const querySnapshot = await getDocs(collection(db, "users"));
+        const querySnapshot = await getDocs(collection(db, "usuarios"));
         const usersList = querySnapshot.docs.map(doc => {
             const data = doc.data();
             // Firestore timestamps need to be converted to JS Date objects
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setFirebaseUser(user);
       if (user) {
-        const userDocRef = doc(db, "users", user.uid);
+        const userDocRef = doc(db, "usuarios", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         setIsAdminSession(false);
         const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        const userDocRef = doc(db, "users", userCredential.user.uid);
+        const userDocRef = doc(db, "usuarios", userCredential.user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
              const userData = userDocSnap.data();
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
     } catch (firebaseError) {
        // Local user login check (created via admin panel)
-        const q = query(collection(db, "users"), where("email", "==", email), where("password", "==", pass));
+        const q = query(collection(db, "usuarios"), where("email", "==", email), where("password", "==", pass));
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
@@ -191,7 +191,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
            mustChangePassword: false,
         };
     
-        const userDocRef = doc(db, "users", user.uid);
+        const userDocRef = doc(db, "usuarios", user.uid);
         await setDoc(userDocRef, {
             ...newUserProfileData,
             createdAt: serverTimestamp(),
@@ -210,7 +210,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Este email ha sido bloqueado y no puede ser registrado.");
     }
     
-    const q = query(collection(db, "users"), where("email", "==", userData.email));
+    const q = query(collection(db, "usuarios"), where("email", "==", userData.email));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
         throw new Error("Este email ya está registrado.");
@@ -227,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           mustChangePassword: true,
         };
 
-        await addDoc(collection(db, "users"), {
+        await addDoc(collection(db, "usuarios"), {
             ...newUserProfileData,
             createdAt: serverTimestamp()
         });
@@ -242,7 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
   
   const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
-    const userDocRef = doc(db, "users", userId);
+    const userDocRef = doc(db, "usuarios", userId);
     await updateDoc(userDocRef, userData);
     
     await fetchAllUsers();
@@ -259,7 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const deleteUser = async (userId: string) => {
-    await deleteDoc(doc(db, "users", userId));
+    await deleteDoc(doc(db, "usuarios", userId));
     await fetchAllUsers();
   }
 
