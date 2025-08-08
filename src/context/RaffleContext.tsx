@@ -58,20 +58,30 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
-    // Critical Change: Do not create a listener if user is not authenticated OR is the admin.
-    // The admin user is local and doesn't have a real UID in Firestore, causing permission errors.
+    // Only set up the listener if the user is authenticated and is NOT an admin.
     if (!isAuthenticated || !user || user.role === 'admin') {
-        setReservedTickets([]);
+        setReservedTickets([]); // Ensure reservations are cleared for non-eligible users.
         return () => {}; // Return an empty unsubscribe function
     }
 
     const q = query(
         collection(db, "reservations"), 
-        where("raffleId", "==", raffleId),
-        where("userId", "==", user.id) // Query only for the current user's reservations
+        where("raffleId", "==", raffleId)
+        // We will fetch all for the raffle, and filter on the client
+        // This requires less strict security rules, but let's check our rules.
+        // A better query is to fetch just the user's reservations and other people's reservations separately.
+        // For now, the rules only allow a user to read their own reservations.
     );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    // The security rules only allow a user to read their own reservations.
+    // The query must therefore include a where clause on the userId.
+    const userReservationsQuery = query(
+        collection(db, "reservations"),
+        where("raffleId", "==", raffleId),
+        where("userId", "==", user.id)
+    );
+
+    const unsubscribe = onSnapshot(userReservationsQuery, (snapshot) => {
         const now = new Date();
         const reservationsData: ReservedTicket[] = [];
         const expiredReservationIds: string[] = [];
@@ -90,7 +100,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
             }
         });
         
-        // This will now only contain reservations for the current user for the specific raffle
         setReservedTickets(reservationsData);
 
         if (expiredReservationIds.length > 0) {
