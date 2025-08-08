@@ -26,7 +26,7 @@ interface RaffleContextType {
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
 
 export const RaffleProvider = ({ children }: { children: ReactNode }) => {
-  const [raffles, setRaffles] = useState<Raffle[]>([]);
+  const [raffles, setRaffless] = useState<Raffle[]>([]);
   const [reservedTickets, setReservedTickets] = useState<ReservedTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, isAuthenticated } = useAuth(); // Usamos isAuthenticated para el control
@@ -47,7 +47,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
           soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
         } as Raffle;
       });
-      setRaffles(rafflesData);
+      setRaffless(rafflesData);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching raffles: ", error);
@@ -58,6 +58,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   const listenToRaffleReservations = useCallback((raffleId: string) => {
+    // Si no está autenticado, no hacer nada y devolver un unsubscribe vacío.
     if (!isAuthenticated || !user) {
         setReservedTickets([]);
         return () => {};
