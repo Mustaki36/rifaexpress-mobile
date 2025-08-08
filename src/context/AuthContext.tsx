@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdminSession, setIsAdminSession] = useState(false);
-
+  
   const fetchAllUsers = useCallback(async (): Promise<UserProfile[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, "usuarios"));
@@ -118,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         return null;
     } catch (firebaseError) {
+        // Fallback for locally created users that don't exist in Firebase Auth
         const q = query(collection(db, "usuarios"), where("email", "==", email), where("password", "==", pass));
         const querySnapshot = await getDocs(q);
         
