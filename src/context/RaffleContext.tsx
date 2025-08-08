@@ -20,6 +20,7 @@ interface RaffleContextType {
   releaseTicket: (raffleId: string, number: number, userId: string) => Promise<void>;
   releaseTicketsForUser: (userId: string, raffleId: string) => Promise<void>;
   purchaseTickets: (raffleId: string, numbers: number[], userId: string) => Promise<void>;
+  listenToRaffleReservations: (raffleId: string) => () => void;
 }
 
 const RaffleContext = createContext<RaffleContextType | undefined>(undefined);
@@ -56,53 +57,48 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
   
-  // Listener for reservations collection - ONLY for authenticated users
-  useEffect(() => {
-      // Si el usuario no está autenticado, no intentamos escuchar y limpiamos el estado.
-      if (!isAuthenticated) {
-          setReservedTickets([]);
-          return;
-      }
+  const listenToRaffleReservations = useCallback((raffleId: string) => {
+    if (!isAuthenticated) {
+        setReservedTickets([]);
+        return () => {};
+    }
 
-      // Si el usuario está autenticado, establecemos el listener.
-      const q = query(collection(db, "reservations"));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-          const now = new Date();
-          const reservationsData: ReservedTicket[] = [];
-          const expiredReservationIds: string[] = [];
+    const q = query(collection(db, "reservations"), where("raffleId", "==", raffleId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const now = new Date();
+        const reservationsData: ReservedTicket[] = [];
+        const expiredReservationIds: string[] = [];
 
-          snapshot.forEach(doc => {
-              const data = doc.data();
-              const expiresAt = data.expiresAt.toDate();
-              if (expiresAt.getTime() > now.getTime()) {
-                  reservationsData.push({
-                      id: doc.id,
-                      ...data,
-                      expiresAt,
-                  } as ReservedTicket);
-              } else {
-                  expiredReservationIds.push(doc.id);
-              }
-          });
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const expiresAt = data.expiresAt.toDate();
+            if (expiresAt.getTime() > now.getTime()) {
+                reservationsData.push({
+                    id: doc.id,
+                    ...data,
+                    expiresAt,
+                } as ReservedTicket);
+            } else {
+                expiredReservationIds.push(doc.id);
+            }
+        });
+        
+        setReservedTickets(reservationsData);
 
-          setReservedTickets(reservationsData);
+        if (expiredReservationIds.length > 0) {
+            const batch = writeBatch(db);
+            expiredReservationIds.forEach(id => {
+                batch.delete(doc(db, "reservations", id));
+            });
+            batch.commit().catch(err => console.error("Failed to delete expired reservations:", err));
+        }
+    }, (error) => {
+        console.error("Error fetching reservations (permission issue likely):", error);
+        setReservedTickets([]);
+    });
 
-          // Limpiamos las reservaciones expiradas
-          if (expiredReservationIds.length > 0) {
-              const batch = writeBatch(db);
-              expiredReservationIds.forEach(id => {
-                  batch.delete(doc(db, "reservations", id));
-              });
-              batch.commit().catch(err => console.error("Failed to delete expired reservations:", err));
-          }
-      }, (error) => {
-          console.error("Error fetching reservations (permission issue likely):", error);
-          setReservedTickets([]);
-      });
-      
-      // La función de limpieza se ejecuta cuando el usuario se desloguea o el componente se desmonta.
-      return () => unsubscribe();
-  }, [isAuthenticated]); // El efecto se ejecuta solo cuando cambia el estado de autenticación.
+    return unsubscribe;
+  }, [isAuthenticated]);
 
 
   const addRaffle = async (raffleData: Omit<Raffle, 'id' | 'soldTickets' | 'createdAt' | 'status'>) => {
@@ -221,7 +217,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <RaffleContext.Provider value={{ raffles, reservedTickets, loading, addRaffle, editRaffle, deleteRaffle, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser }}>
+    <RaffleContext.Provider value={{ raffles, reservedTickets, loading, addRaffle, editRaffle, deleteRaffle, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser, listenToRaffleReservations }}>
       {children}
     </RaffleContext.Provider>
   );

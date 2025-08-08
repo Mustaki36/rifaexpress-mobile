@@ -20,7 +20,7 @@ import Template from "@/components/template";
 
 export default function RafflePage() {
   const params = useParams();
-  const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser } = useRaffles();
+  const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser, listenToRaffleReservations } = useRaffles();
   const { user, isAuthenticated } = useAuth();
   const raffleId = params.id as string;
   const raffle = raffles.find((r) => r.id === raffleId);
@@ -33,6 +33,14 @@ export default function RafflePage() {
 
   const { toast } = useToast();
   
+  useEffect(() => {
+    if (raffleId) {
+        const unsubscribe = listenToRaffleReservations(raffleId);
+        return () => unsubscribe();
+    }
+  }, [raffleId, listenToRaffleReservations]);
+
+
   const isRaffleSoldOut = useMemo(() => {
     if (!raffle) return false;
     return raffle.soldTickets.length >= raffle.totalTickets;
@@ -62,16 +70,12 @@ export default function RafflePage() {
 
 
   const otherUsersReservedTickets = useMemo(() => {
-    // We get all reserved tickets from the context, which is now fed by Firestore in real-time.
-    // We just filter out the ones for the current user so they don't see their own selections as "reserved by others".
     return reservedTickets
       .filter(t => t.raffleId === raffleId && t.userId !== user?.id)
       .map(t => t.number);
   }, [reservedTickets, raffleId, user?.id]);
 
   useEffect(() => {
-    // This is a cleanup function that runs when the component unmounts.
-    // It releases any tickets the user had selected but didn't purchase.
     return () => {
       if (user?.id && raffleId && selectedNumbers.length > 0) {
         releaseTicketsForUser(user.id, raffleId);
