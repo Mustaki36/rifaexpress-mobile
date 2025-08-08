@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useSettings } from "@/context/SettingsContext";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { useBlock } from "@/context/BlockContext";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
@@ -54,6 +55,7 @@ type VerificationStatus = 'idle' | 'verifying' | 'success' | 'error';
 
 export default function SignupPage() {
   const { signup } = useAuth();
+  const { blockedUsers } = useBlock();
   const { toast } = useToast();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -191,6 +193,16 @@ export default function SignupPage() {
       });
       return;
     }
+
+    const isBlocked = blockedUsers.some(u => u.email === values.email);
+    if (isBlocked) {
+        toast({
+            variant: "destructive",
+            title: "Registro denegado",
+            description: "Este email ha sido bloqueado y no puede registrarse.",
+        });
+        return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -209,8 +221,6 @@ export default function SignupPage() {
             friendlyMessage = "Este email ya está registrado. Por favor, inicia sesión."
          } else if (error.message.includes("auth/weak-password")) {
             friendlyMessage = "La contraseña es demasiado débil. Debe tener al menos 6 caracteres."
-         } else if (error.message.includes("blocked")) {
-             friendlyMessage = error.message;
          }
          toast({
             variant: "destructive",

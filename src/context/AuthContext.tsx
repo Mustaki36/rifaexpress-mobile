@@ -100,47 +100,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return MOCK_ADMIN_USER;
     }
     
-    try {
-        setIsAdminSession(false);
-        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        const userDocRef = doc(db, "usuarios", userCredential.user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-             const userData = userDocSnap.data();
-             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
-             const userProfile = { 
-                 id: userCredential.user.uid, 
-                 ...userData,
-                 createdAt: createdAt
-             } as UserProfile;
-             setCurrentUser(userProfile);
-             return userProfile;
-        }
-        return null;
-    } catch (firebaseError) {
-        // Fallback for locally created users that don't exist in Firebase Auth
-        const q = query(collection(db, "usuarios"), where("email", "==", email), where("password", "==", pass));
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-            const userDoc = querySnapshot.docs[0];
-            const userData = userDoc.data();
-             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
-            const localUser = { 
-                id: userDoc.id, 
-                ...userData,
-                createdAt: createdAt
-            } as UserProfile;
-            
-            setIsAdminSession(false); 
-            setCurrentUser(localUser);
-            setFirebaseUser(null);
-            return localUser;
-        }
-
-        console.error("Login failed:", firebaseError);
-        throw firebaseError;
+    // Regular user login
+    setIsAdminSession(false);
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    const userDocRef = doc(db, "usuarios", userCredential.user.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (userDocSnap.exists()) {
+         const userData = userDocSnap.data();
+         const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
+         const userProfile = { 
+             id: userCredential.user.uid, 
+             ...userData,
+             createdAt: createdAt
+         } as UserProfile;
+         setCurrentUser(userProfile);
+         return userProfile;
     }
+    return null;
   };
 
   const logout = async () => {
