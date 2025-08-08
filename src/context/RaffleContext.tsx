@@ -36,6 +36,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
     const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      console.log('%c[RaffleContext] Conexión establecida y datos recibidos de Firestore (colección "raffles").', 'color: #4CAF50; font-weight: bold;');
       const rafflesData = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {

@@ -9,7 +9,7 @@ import {
     signOut,
     User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
 import { MOCK_ADMIN_USER } from '@/lib/data';
@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('%c[AuthContext] Conexión establecida con Firebase Authentication.', 'color: #4CAF50; font-weight: bold;');
       setLoading(true);
       if (isAdminSession) {
           setLoading(false);
