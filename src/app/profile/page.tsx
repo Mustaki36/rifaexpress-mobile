@@ -123,7 +123,7 @@ export default function ProfilePage() {
                         <div key={raffle.raffleId} className="p-4 border rounded-md bg-background">
                             <h4 className="font-semibold mb-3 text-primary">{raffle.raffleTitle}</h4>
                             <div className="flex flex-wrap gap-2">
-                                {raffle.ticketNumbers.map(num => (
+                                {raffle.ticketNumbers && raffle.ticketNumbers.map(num => (
                                     <Badge key={num} variant="secondary" className="text-base font-mono">
                                         #{num.toString().padStart(3, '0')}
                                     </Badge>
