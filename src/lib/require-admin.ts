@@ -21,14 +21,13 @@ export function requireAdmin(
     }
 
     try {
-      // Verifica el token de ID y comprueba los custom claims.
+      // Verifica el token de ID. No necesitamos los claims aquí, ya que el rol se verifica contra Firestore.
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       
       // La fuente de verdad para el rol es ahora el documento de Firestore.
       const userDoc = await admin.firestore().collection('usuarios').doc(decodedToken.uid).get();
-      const userData = userDoc.data();
-
-      if (!userData || userData.role !== 'admin') {
+      
+      if (!userDoc.exists() || userDoc.data()?.role !== 'admin') {
          return NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
       }
 

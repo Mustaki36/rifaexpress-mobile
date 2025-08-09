@@ -91,11 +91,13 @@ function AdminDashboard() {
 
 export default function AdminPage() {
     const { isAuthenticated, user, loading } = useAuth();
+    const router = useRouter();
 
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-4 text-muted-foreground">Verificando permisos...</p>
             </div>
         );
     }
@@ -103,8 +105,12 @@ export default function AdminPage() {
     const isAdmin = isAuthenticated && user?.role === 'admin';
 
     if (!isAdmin) {
+        // En lugar de redirigir aquí, lo que puede causar bucles,
+        // simplemente mostramos el formulario de login. El middleware
+        // se encargará de las redirecciones si un no-admin intenta acceder.
         return <AdminLoginForm />;
     }
 
+    // Solo si no está cargando y es admin, mostramos el dashboard.
     return <AdminDashboard />;
 }

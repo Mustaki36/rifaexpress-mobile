@@ -8,7 +8,6 @@ import {
     signInWithEmailAndPassword, 
     signOut,
     User as FirebaseUser,
-    sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
@@ -36,10 +35,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
-        // Refresca el token para obtener los últimos claims
+        // Forzar el refresco del token asegura que los claims estén actualizados.
         await user.getIdToken(true); 
         const userDocRef = doc(db, "usuarios", user.uid);
         
+        // Usamos onSnapshot para escuchar cambios en el perfil del usuario en tiempo real.
         const unsubUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
@@ -50,11 +50,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   setFirebaseUser(null);
                   signOut(auth);
                 } else {
-                  const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
+                  // Combinamos los datos de Auth (uid, email) con los de Firestore.
                   const userProfile = { 
                       id: user.uid, 
+                      email: user.email!,
                       ...userData,
-                      createdAt: createdAt
+                      // Convertimos el Timestamp de Firestore a un objeto Date de JS.
+                      createdAt: (userData.createdAt as any)?.toDate ? (userData.createdAt as any).toDate() : new Date(),
                   } as UserProfile;
                   setCurrentUser(userProfile);
                   setFirebaseUser(user);
@@ -71,6 +73,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setFirebaseUser(null);
             setLoading(false);
         });
+
+        // Limpiamos el listener de perfil cuando el estado de auth cambia.
         return () => unsubUser();
       } else {
         setCurrentUser(null);
@@ -79,6 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     
+    // Limpiamos el listener de auth cuando el componente se desmonta.
     return () => unsubscribe();
   }, []);
 
@@ -94,11 +99,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await signOut(auth);
             throw new Error("This account is suspended.");
          }
-         const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date();
          const userProfile = { 
-             id: userCredential.user.uid, 
+             id: userCredential.user.uid,
+             email: userCredential.user.email!, 
              ...userData,
-             createdAt: createdAt
+             createdAt: (userData.createdAt as any)?.toDate ? (userData.createdAt as any).toDate() : new Date(),
          } as UserProfile;
          return userProfile;
     }
@@ -113,8 +118,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
     
-    // Los roles de los usuarios que se registran por sí mismos se establecen en Firestore
-    // y no tendrán custom claims a menos que un admin los eleve.
     const newUserProfileData = {
        name,
        email,
