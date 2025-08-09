@@ -1,5 +1,19 @@
-# Firebase Studio
+# RifaExpress Mobile
 
-This is a NextJS starter in Firebase Studio.
+App de rifas en tiempo real con **Next.js** + **Firebase** (Auth, Firestore, Hosting).
 
-To get started, take a look at src/app/page.tsx.
+## Funcionalidades
+- Panel de administración con **roles** usando *custom claims*
+- Gestión de rifas, boletos y **sorteos** con cuenta regresiva
+- Endpoints seguros con **firebase-admin**
+- UI responsive con **Tailwind CSS**
+
+## Desarrollo
+npm i
+npm run dev
+
+## Variables de entorno
+Revisa `.env.example` y completa tus claves locales.
+
+## Deploy
+Firebase Hosting
