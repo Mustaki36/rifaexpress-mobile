@@ -150,14 +150,7 @@ export default function RafflePage() {
 
   const totalPrice = selectedNumbers.length * raffle.ticketPrice;
   const drawDate = parseDrawDate(raffle.drawDate);
-
-  if (!drawDate) {
-     return (
-      <div className="container text-center py-20">
-        <h1 className="text-2xl font-bold">Fecha de rifa inválida</h1>
-      </div>
-    );
-  }
+  const drawDateString = drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
     <Template>
@@ -185,7 +178,7 @@ export default function RafflePage() {
               <Tag className="h-4 w-4 text-primary"/> <span>Premio: <strong>{raffle.prize}</strong></span>
             </div>
             <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
+              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{drawDateString}</strong></span>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               {raffle.description}

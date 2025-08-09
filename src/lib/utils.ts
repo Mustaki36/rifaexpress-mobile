@@ -8,41 +8,42 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const parseDrawDate = (dateInput: string | Date | Timestamp | null | undefined): Date => {
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+
   if (!dateInput) {
-    // Return the current date if input is null or undefined
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
     return now;
   }
 
-  let date: Date;
+  let dateString: string;
 
-  // Handle Firestore Timestamp
-  if (typeof dateInput === 'object' && dateInput !== null && 'toDate' in dateInput && typeof dateInput.toDate === 'function') {
-    date = (dateInput as Timestamp).toDate();
-  } 
-  // Handle Date object
-  else if (dateInput instanceof Date) {
-    date = dateInput;
-  }
-  // Handle string 'YYYY-MM-DD'
-  else if (typeof dateInput === 'string') {
-    const [year, month, day] = dateInput.split('-').map(Number);
-    if (isNaN(year) || isNaN(month) || isNaN(day) || month < 1 || month > 12 || day < 1 || day > 31) {
-       const now = new Date();
-       now.setHours(23, 59, 59, 999);
-       return now;
+  if (typeof dateInput === 'object' && dateInput !== null) {
+    if ('toDate' in dateInput && typeof (dateInput as any).toDate === 'function') {
+      // It's a Firestore Timestamp
+      dateString = (dateInput as Timestamp).toDate().toISOString().split('T')[0];
+    } else if (dateInput instanceof Date) {
+      // It's a Date object
+      dateString = dateInput.toISOString().split('T')[0];
+    } else {
+        return now; // Unsupported object type
     }
-    date = new Date(year, month - 1, day);
-  }
-  // Fallback for any other unexpected type
-  else {
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
-    return now;
+  } else if (typeof dateInput === 'string') {
+    dateString = dateInput;
+  } else {
+    return now; // Unsupported type
   }
 
-  // Set time to the end of the day
+  const parts = dateString.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) {
+    return now; // Invalid string format
+  }
+
+  const [year, month, day] = parts;
+  if (month < 1 || month > 12 || day < 1 || day > 31) {
+    return now; // Invalid date components
+  }
+
+  const date = new Date(year, month - 1, day);
   date.setHours(23, 59, 59, 999);
   return date;
 };

@@ -43,7 +43,6 @@ export default function Home() {
         filtered.sort((a, b) => {
             const dateA = parseDrawDate(a.drawDate);
             const dateB = parseDrawDate(b.drawDate);
-            if (!dateA || !dateB) return 0;
             return dateB.getTime() - dateA.getTime();
         });
         break;
@@ -51,7 +50,6 @@ export default function Home() {
          filtered.sort((a, b) => {
             const dateA = parseDrawDate(a.drawDate);
             const dateB = parseDrawDate(b.drawDate);
-            if (!dateA || !dateB) return 0;
             return dateA.getTime() - dateB.getTime();
         });
         break;

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Clock, Ticket, BadgeCheck } from "lucide-react";
 import type { Raffle } from "@/lib/types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Badge } from "./ui/badge";
 import { cn, parseDrawDate } from "@/lib/utils";
 import { CountdownTimer } from "./countdown-timer";
@@ -23,22 +23,6 @@ import { useTransition } from "@/context/TransitionContext";
 interface RaffleCardProps {
   raffle: Raffle;
 }
-
-const calculateTimeLeft = (targetDate: Date | null) => {
-    if (!targetDate) return { timeLeft: {}, totalSeconds: 0 };
-    const difference = +new Date(targetDate) - +new Date();
-    let timeLeft = {};
-
-    if (difference > 0) {
-        timeLeft = {
-            días: Math.floor(difference / (1000 * 60 * 60 * 24)),
-            horas: Math.floor((difference / (1000 * 60 * 60)) % 24),
-            minutos: Math.floor((difference / 1000 / 60) % 60),
-            segundos: Math.floor((difference / 1000) % 60)
-        };
-    }
-    return { timeLeft, totalSeconds: difference / 1000 };
-};
 
 const getLotteryName = (totalTickets: number): string => {
     if (totalTickets < 100) return "Pega 2";
@@ -53,17 +37,21 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   const cardOpenSoundUrl = "https://files.catbox.moe/01lxup.mp3";
   const { setAnimationDuration } = useTransition();
 
-  const drawDate = parseDrawDate(raffle.drawDate);
-  const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(drawDate).totalSeconds);
+  const drawDate = useMemo(() => parseDrawDate(raffle.drawDate), [raffle.drawDate]);
+
+  const [totalSecondsLeft, setTotalSecondsLeft] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-        const { totalSeconds } = calculateTimeLeft(drawDate);
-        setTotalSecondsLeft(totalSeconds);
-    }, 1000);
+    const calculateTime = () => {
+        const difference = +drawDate - +new Date();
+        setTotalSecondsLeft(difference / 1000);
+    };
+    
+    calculateTime();
+    const timer = setInterval(calculateTime, 1000);
 
-    return () => clearTimeout(timer);
-  });
+    return () => clearInterval(timer);
+  }, [drawDate]);
   
   const drawDateFormatted = drawDate 
     ? drawDate.toLocaleDateString('es-ES', {
@@ -115,7 +103,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-grow p-6 pt-0">
-        {isSoldOut && drawDate ? (
+        {isSoldOut ? (
             <CountdownTimer 
                 targetDate={drawDate.toISOString()} 
                 isCard={false}
