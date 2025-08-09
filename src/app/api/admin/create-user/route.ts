@@ -18,9 +18,10 @@ export async function POST(req: Request) {
     }
 
     const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const adminUserDoc = await admin.firestore().collection('usuarios').doc(decodedToken.uid).get();
 
-    // 2. Check for Admin Role
-    if (decodedToken.role !== 'admin') {
+    // 2. Check for Admin Role from Firestore
+    if (!adminUserDoc.exists || adminUserDoc.data()?.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
     }
 
@@ -35,52 +36,45 @@ export async function POST(req: Request) {
     let userRecord;
     let message: string;
 
+    const userDocRefByEmail = admin.firestore().collection('usuarios').where('email', '==', email);
+    const existingUserSnapshot = await userDocRefByEmail.get();
+    
+    let existingUserDoc;
+    if (!existingUserSnapshot.empty) {
+        existingUserDoc = existingUserSnapshot.docs[0];
+    }
+
     // 4. Upsert User Logic
-    try {
+    if (existingUserDoc) {
       // User exists, update them
-      userRecord = await admin.auth().getUserByEmail(email);
+      userRecord = await admin.auth().getUser(existingUserDoc.id);
       await admin.auth().updateUser(userRecord.uid, {
         displayName: name,
       });
-      await admin.auth().setCustomUserClaims(userRecord.uid, { role });
+      // We no longer set custom claims for role, Firestore is the source of truth
+      await existingUserDoc.ref.update({ name, role });
       message = `Usuario '${name}' actualizado exitosamente.`;
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
+    } else {
         // User does not exist, create them
         userRecord = await admin.auth().createUser({
           email: email,
           displayName: name,
           emailVerified: false, // User must verify their email
         });
-        await admin.auth().setCustomUserClaims(userRecord.uid, { role });
-        message = `Usuario '${name}' creado exitosamente.`;
-      } else {
-        // Other errors (network, etc.)
-        throw error;
-      }
-    }
-    
-    // Create Firestore document if it doesn't exist
-    const userDocRef = admin.firestore().collection('usuarios').doc(userRecord.uid);
-    const userDoc = await userDocRef.get();
-    if (!userDoc.exists) {
+        // We no longer set custom claims for role, Firestore is the source of truth
+        const userDocRef = admin.firestore().collection('usuarios').doc(userRecord.uid);
         await userDocRef.set({
             name: name,
             email: email,
             role: role,
-            isVerified: false, // Default value
+            isVerified: false,
             avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
             tickets: [],
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            mustChangePassword: true, // Force password change
+            mustChangePassword: true,
         });
-    } else {
-        await userDocRef.update({
-            name: name,
-            role: role
-        });
+        message = `Usuario '${name}' creado exitosamente.`;
     }
-
 
     // 5. Generate Password Reset Link and respond
     const link = await admin.auth().generatePasswordResetLink(email);

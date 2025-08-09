@@ -40,13 +40,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
-        const claims = (await user.getIdTokenResult(true)).claims; // Force refresh
-        const userRole = claims.role || 'regular'; // Default to regular if no role claim
-
+        
         const unsubUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                if (userData.role === 'suspended' || userRole === 'suspended') {
+                if (userData.role === 'suspended') {
                   setCurrentUser(null);
                   setFirebaseUser(null);
                   signOut(auth);
@@ -55,7 +53,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   const userProfile = { 
                       id: user.uid, 
                       ...userData,
-                      role: userRole,
                       createdAt: createdAt
                   } as UserProfile;
                   setCurrentUser(userProfile);
@@ -88,12 +85,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const user = userCredential.user;
     const userDocRef = doc(db, "usuarios", user.uid);
     const userDocSnap = await getDoc(userDocRef);
-    const claims = (await user.getIdTokenResult()).claims;
-    const userRole = claims.role || 'regular';
-
+    
     if (userDocSnap.exists()) {
          const userData = userDocSnap.data();
-         if(userData.role === 'suspended' || userRole === 'suspended') {
+         if(userData.role === 'suspended') {
             await signOut(auth);
             throw new Error("This account is suspended.");
          }
@@ -101,7 +96,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
          const userProfile = { 
              id: userCredential.user.uid, 
              ...userData,
-             role: userRole,
              createdAt: createdAt
          } as UserProfile;
          return userProfile;
