@@ -1,54 +1,59 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+    
+    // Función helper para verificar si el usuario es administrador
     function isAdmin() {
-      return request.auth.token.role == 'admin';
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Los perfiles de usuario
     match /usuarios/{userId} {
-      // Admins can read/write any user document.
-      // Users can only read/write their own document.
-      allow read, write: if isAdmin() || isOwner(userId);
-      // Admins can create new user documents
-      allow create: if isAdmin();
-    }
-    
-    match /raffles/{raffleId} {
-      // Anyone can read raffles
-      allow read: if true;
-      // Only admins or users with the 'creator' role can create raffles
-      allow create: if request.auth != null && (isAdmin() || request.auth.token.role == 'creator');
-      // Only admins or the original creator can update/delete a raffle
-      allow update, delete: if isAdmin() || (request.auth.uid == resource.data.creatorId);
-    }
-    
-    match /reservations/{reservationId} {
-        // Anyone can read reservations to see what's taken
-        allow read: if true;
-        // Only authenticated users can create reservations for themselves
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        // Only the user who made the reservation can delete it
-        allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
-    }
-    
-    match /results/{resultId} {
-        // Anyone can see past results
-        allow read: if true;
-        // Only admins can add or delete results
-        allow create, delete: if isAdmin();
-    }
-    
-    match /blockedUsers/{blockedId} {
-        // Only admins can manage the block list
-        allow read, write, create, delete: if isAdmin();
-    }
+      // Un usuario solo puede leer y actualizar su propio perfil.
+      allow read, update: if request.auth.uid == userId;
+      // Nadie puede crear o eliminar su propio perfil directamente, debe ser a través de las funciones de Auth.
+      allow create, delete: if false;
 
+      // Un administrador puede leer el perfil de cualquier usuario.
+      allow get: if isAdmin();
+    }
+    
+    // Colección de usuarios bloqueados
+    match /blockedUsers/{docId} {
+      // Solo los administradores pueden leer, crear, actualizar y eliminar de la lista de bloqueados.
+      allow read, write: if isAdmin();
+    }
+    
+    // Las rifas
+    match /raffles/{raffleId} {
+      // Cualquiera puede leer las rifas.
+      allow read: if true;
+      // Solo los administradores pueden eliminar rifas.
+      allow delete: if isAdmin();
+      // Un usuario puede crear una rifa si es 'creator' o 'admin'.
+      // La actualización se permite bajo las mismas condiciones.
+      allow create, update: if get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['creator', 'admin'];
+    }
+    
+    // Reservas de boletos
+    match /reservations/{reservationId} {
+      // Cualquiera autenticado puede leer las reservas (para ver qué está reservado).
+      allow read: if request.auth != null;
+      // Un usuario autenticado puede crear una reserva (para sí mismo).
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Un usuario solo puede eliminar su propia reserva.
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Nadie puede actualizar una reserva, debe ser eliminada y creada de nuevo.
+      allow update: if false;
+    }
+    
+    // Resultados de las rifas
+    match /results/{resultId} {
+      // Cualquiera puede ver los resultados.
+      allow read: if true;
+      // Solo los administradores pueden escribir o eliminar resultados.
+      allow write, delete: if isAdmin();
+    }
   }
 }

@@ -13,7 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -31,8 +30,6 @@ import { useEffect } from "react";
 import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
-  name: z.string().min(2, "El nombre es requerido."),
-  email: z.string().email("Debe ser un email válido."),
   role: z.enum(["regular", "creator", "admin", "suspended"], {
     required_error: "Debes seleccionar un rol.",
   }),
@@ -51,8 +48,6 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      email: "",
       role: "regular",
     },
   });
@@ -60,8 +55,6 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
   useEffect(() => {
     if (user) {
         form.reset({
-            name: user.name,
-            email: user.email,
             role: user.role,
         })
     }
@@ -71,21 +64,11 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) return;
     
-    // Prevent changing the main admin's role
-    if (user.role === 'admin' && user.id === 'firebase-admin-user-id' && values.role !== 'admin') {
-         toast({
-            variant: "destructive",
-            title: "Acción no permitida",
-            description: "No se puede cambiar el rol de la cuenta principal de administrador.",
-          });
-          return;
-    }
-    
     try {
       await onUserEdited(user.id, values);
       toast({
-        title: "Usuario Actualizado",
-        description: `Los datos de ${values.name} han sido actualizados.`,
+        title: "Rol Actualizado",
+        description: `El rol de ${user.name} ha sido actualizado a ${values.role}.`,
       });
       onOpenChange(false);
     } catch (error) {
@@ -102,46 +85,20 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Editar Usuario</SheetTitle>
+          <SheetTitle>Editar Rol de Usuario</SheetTitle>
           <SheetDescription>
-            Modifica los detalles del usuario. Los cambios se guardarán inmediatamente.
+            Modifica el rol para <span className="font-bold">{user?.name}</span>. Los cambios se aplicarán inmediatamente y afectarán los permisos del usuario.
           </SheetDescription>
         </SheetHeader>
         <Separator className="my-4" />
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre Completo</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
                 control={form.control}
                 name="role"
                 render={({ field }) => (
                     <FormItem className="space-y-3">
-                    <FormLabel>Rol del Usuario</FormLabel>
+                    <FormLabel>Nuevo Rol</FormLabel>
                     <FormControl>
                         <RadioGroup
                         onValueChange={field.onChange}
@@ -149,27 +106,19 @@ export function EditUserSheet({ open, onOpenChange, user, onUserEdited }: EditUs
                         className="grid grid-cols-2 gap-4"
                         >
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="regular" />
-                            </FormControl>
+                            <FormControl><RadioGroupItem value="regular" /></FormControl>
                             <FormLabel className="font-normal">Regular</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="creator" />
-                            </FormControl>
+                            <FormControl><RadioGroupItem value="creator" /></FormControl>
                             <FormLabel className="font-normal">Creador</FormLabel>
                         </FormItem>
                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="admin" />
-                            </FormControl>
+                            <FormControl><RadioGroupItem value="admin" /></FormControl>
                             <FormLabel className="font-normal">Admin</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="suspended" />
-                            </FormControl>
+                            <FormControl><RadioGroupItem value="suspended" /></FormControl>
                             <FormLabel className="font-normal text-destructive">Suspendido</FormLabel>
                         </FormItem>
                         </RadioGroup>

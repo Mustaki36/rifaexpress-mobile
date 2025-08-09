@@ -1,6 +1,8 @@
+// src/app/api/admin/create-user/route.ts
 
 import { NextResponse } from 'next/server';
 import admin from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/require-admin';
 import { z } from 'zod';
 
 const userSchema = z.object({
@@ -9,23 +11,8 @@ const userSchema = z.object({
   role: z.enum(['regular', 'creator']),
 });
 
-export async function POST(req: Request) {
+async function handler(req: Request) {
   try {
-    // 1. Verify Authorization Token
-    const idToken = req.headers.get('Authorization')?.split('Bearer ')[1];
-    if (!idToken) {
-      return NextResponse.json({ error: 'Unauthorized: No token provided' }, { status: 401 });
-    }
-
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const adminUserDoc = await admin.firestore().collection('usuarios').doc(decodedToken.uid).get();
-
-    // 2. Check for Admin Role from Firestore
-    if (!adminUserDoc.exists || adminUserDoc.data()?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
-    }
-
-    // 3. Validate Request Body
     const body = await req.json();
     const validation = userSchema.safeParse(body);
     if (!validation.success) {
@@ -36,69 +23,59 @@ export async function POST(req: Request) {
     let userRecord;
     let message: string;
 
-    const userDocRefByEmail = admin.firestore().collection('usuarios').where('email', '==', email);
-    const existingUserSnapshot = await userDocRefByEmail.get();
-    
-    let existingUserDoc;
-    if (!existingUserSnapshot.empty) {
-        existingUserDoc = existingUserSnapshot.docs[0];
-    }
+    try {
+      // Verificar si el usuario ya existe en Firebase Auth
+      userRecord = await admin.auth().getUserByEmail(email);
 
-    // 4. Upsert User Logic
-    if (existingUserDoc) {
-      // User exists, update them
-      userRecord = await admin.auth().getUser(existingUserDoc.id);
-      await admin.auth().updateUser(userRecord.uid, {
-        displayName: name,
-      });
-      // We no longer set custom claims for role, Firestore is the source of truth
-      await existingUserDoc.ref.update({ name, role });
+      // Si existe, actualizar
+      await admin.auth().updateUser(userRecord.uid, { displayName: name });
+      await admin.auth().setCustomUserClaims(userRecord.uid, { role });
+      await admin.firestore().collection('usuarios').doc(userRecord.uid).update({ name, role });
+      
       message = `Usuario '${name}' actualizado exitosamente.`;
-    } else {
-        // User does not exist, create them
+
+    } catch (error: any) {
+      // Si el error es "user-not-found", el usuario no existe, así que lo creamos
+      if (error.code === 'auth/user-not-found') {
         userRecord = await admin.auth().createUser({
           email: email,
           displayName: name,
-          emailVerified: false, // User must verify their email
+          emailVerified: true, // Lo marcamos como verificado ya que un admin lo crea
         });
-        // We no longer set custom claims for role, Firestore is the source of truth
+        
+        await admin.auth().setCustomUserClaims(userRecord.uid, { role });
+
         const userDocRef = admin.firestore().collection('usuarios').doc(userRecord.uid);
         await userDocRef.set({
             name: name,
             email: email,
             role: role,
-            isVerified: false,
+            isVerified: false, // La verificación por IA es un proceso separado
             avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
             tickets: [],
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            mustChangePassword: true,
+            mustChangePassword: true, // Forzar al usuario a cambiar la contraseña
         });
         message = `Usuario '${name}' creado exitosamente.`;
+      } else {
+        // Si es otro tipo de error, lo relanzamos para que sea capturado por el catch principal
+        throw error;
+      }
     }
 
-    // 5. Generate Password Reset Link and respond
+    // En ambos casos (creación o actualización), generamos y enviamos un enlace de restablecimiento
     const link = await admin.auth().generatePasswordResetLink(email);
     const finalMessage = `${message} Se ha enviado un enlace a ${email} para que establezca su contraseña.`;
     
-    // NOTE: In a real app, you would use a service like Nodemailer or SendGrid
-    // to actually email the link to the user. For this context, we return it in the response for the admin.
+    // En una app real, aquí se enviaría el email. Para esta demo, lo mostramos en el log.
     console.log(`Password reset link for ${email}: ${link}`);
 
     return NextResponse.json({ success: true, message: finalMessage }, { status: 200 });
 
   } catch (error: any) {
     console.error('Error in create-user endpoint:', error);
-    let errorMessage = 'An internal server error occurred.';
-    let statusCode = 500;
-
-    if (error.code === 'auth/id-token-expired') {
-        errorMessage = 'Unauthorized: Token expired.';
-        statusCode = 401;
-    } else if (error.codePrefix === 'auth/') {
-        errorMessage = `Firebase Auth Error: ${error.message}`;
-        statusCode = 400;
-    }
-
-    return NextResponse.json({ error: errorMessage }, { status: statusCode });
+    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
   }
 }
+
+export const POST = requireAdmin(handler);

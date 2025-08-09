@@ -10,7 +10,7 @@ import {
     User as FirebaseUser,
     sendPasswordResetEmail,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, Address } from '@/lib/types';
 
@@ -22,9 +22,6 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<UserProfile | null>;
   logout: () => Promise<void>;
   signup: (name: string, email: string, pass: string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => Promise<void>;
-  editUser: (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => Promise<void>;
-  deleteUser: (userId: string) => Promise<void>;
-  suspendUser: (userId: string) => Promise<void>;
   forcePasswordChange: (userId: string, newPass: string) => Promise<void>;
 }
 
@@ -39,11 +36,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
+        // Refresca el token para obtener los últimos claims
+        await user.getIdToken(true); 
         const userDocRef = doc(db, "usuarios", user.uid);
         
         const unsubUser = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
+                // El rol de Firestore es la fuente de verdad.
+                // Si está suspendido, cerramos sesión.
                 if (userData.role === 'suspended') {
                   setCurrentUser(null);
                   setFirebaseUser(null);
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   setFirebaseUser(user);
                 }
             } else {
+               // Si el documento de Firestore no existe, el usuario no está completamente configurado.
                setCurrentUser(null);
                setFirebaseUser(null);
             }
@@ -108,17 +110,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const signup = async (name: string, email: string, pass:string, phone: string, address: Address, isVerified: boolean, role: 'regular' | 'creator') => {
-    // Note: Creating users via signup won't have custom claims until an admin sets them.
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
     
+    // Los roles de los usuarios que se registran por sí mismos se establecen en Firestore
+    // y no tendrán custom claims a menos que un admin los eleve.
     const newUserProfileData = {
        name,
        email,
        phone,
        address,
        isVerified,
-       role, // This will be the initial role in Firestore, but claims are the source of truth
+       role, 
        avatar: `https://placehold.co/100x100.png?text=${name.charAt(0)}`,
        tickets: [],
        mustChangePassword: false,
@@ -131,27 +134,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
   
-  const editUser = async (userId: string, userData: Partial<Omit<UserProfile, 'id'>>) => {
-      const userDocRef = doc(db, "usuarios", userId);
-      await updateDoc(userDocRef, userData);
-  };
-  
-  const deleteUser = async (userId: string) => {
-    const userDocRef = doc(db, "usuarios", userId);
-    await deleteDoc(userDocRef);
-    // Note: This does not delete the user from Firebase Auth to prevent accidental irreversible deletion.
-    // That should be done via the Firebase Console or a more specific admin action.
-  };
-  
-  const suspendUser = async (userId: string) => {
-      const userDocRef = doc(db, "usuarios", userId);
-      await updateDoc(userDocRef, { role: 'suspended' });
-      // In a real app with Admin SDK, you'd also call `admin.auth().setCustomUserClaims(userId, { role: 'suspended' });`
-      // and potentially `admin.auth().revokeRefreshTokens(userId);` from a backend.
-  };
-  
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      // This is a client-side simulation. A real implementation should use Admin SDK to trigger a password reset email.
+      // Esta simulación es solo para la interfaz. El cambio de contraseña real lo inicia el admin.
       const userDocRef = doc(db, "usuarios", userId);
       await updateDoc(userDocRef, {
         mustChangePassword: false,
@@ -159,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser && !!firebaseUser, loading, login, logout, signup, editUser, deleteUser, forcePasswordChange, suspendUser }}>
+    <AuthContext.Provider value={{ user: currentUser, firebaseUser, isAuthenticated: !!currentUser && !!firebaseUser, loading, login, logout, signup, forcePasswordChange }}>
       {children}
     </AuthContext.Provider>
   );
