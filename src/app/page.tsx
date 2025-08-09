@@ -18,13 +18,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Template from "@/components/template";
 import { RaffleCardSkeleton } from "@/components/raffle-card-skeleton";
+import { parseDrawDate } from "@/lib/utils";
+
 
 type SortOption = "recent" | "oldest" | "price_asc" | "price_desc";
-
-const parseDrawDate = (dateString: string): Date => {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
-}
 
 export default function Home() {
   const { raffles, loading } = useRaffles();
@@ -43,10 +40,20 @@ export default function Home() {
 
     switch (sortOption) {
       case "recent":
-        filtered.sort((a, b) => parseDrawDate(b.drawDate).getTime() - parseDrawDate(a.drawDate).getTime());
+        filtered.sort((a, b) => {
+            const dateA = parseDrawDate(a.drawDate);
+            const dateB = parseDrawDate(b.drawDate);
+            if (!dateA || !dateB) return 0;
+            return dateB.getTime() - dateA.getTime();
+        });
         break;
       case "oldest":
-        filtered.sort((a, b) => parseDrawDate(a.drawDate).getTime() - parseDrawDate(b.drawDate).getTime());
+         filtered.sort((a, b) => {
+            const dateA = parseDrawDate(a.drawDate);
+            const dateB = parseDrawDate(b.drawDate);
+            if (!dateA || !dateB) return 0;
+            return dateA.getTime() - dateB.getTime();
+        });
         break;
       case "price_asc":
         filtered.sort((a, b) => a.ticketPrice - b.ticketPrice);

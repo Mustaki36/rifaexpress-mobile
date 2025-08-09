@@ -16,7 +16,7 @@ import { Clock, Ticket, BadgeCheck } from "lucide-react";
 import type { Raffle } from "@/lib/types";
 import { useState, useEffect, useRef } from "react";
 import { Badge } from "./ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, parseDrawDate } from "@/lib/utils";
 import { CountdownTimer } from "./countdown-timer";
 import { useTransition } from "@/context/TransitionContext";
 
@@ -24,12 +24,8 @@ interface RaffleCardProps {
   raffle: Raffle;
 }
 
-const parseDrawDate = (dateString: string): Date => {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
-}
-
-const calculateTimeLeft = (targetDate: Date) => {
+const calculateTimeLeft = (targetDate: Date | null) => {
+    if (!targetDate) return { timeLeft: {}, totalSeconds: 0 };
     const difference = +new Date(targetDate) - +new Date();
     let timeLeft = {};
 
@@ -69,13 +65,15 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
     return () => clearTimeout(timer);
   });
   
-  const drawDateFormatted = drawDate.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      hour: 'numeric',
-      minute: 'numeric',
-      hour12: true
-  });
+  const drawDateFormatted = drawDate 
+    ? drawDate.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'long',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      })
+    : "Fecha no disponible";
 
   const handleCardClick = () => {
     setAnimationDuration(0.5); // Set fast transition for card clicks
@@ -117,7 +115,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-grow p-6 pt-0">
-        {isSoldOut ? (
+        {isSoldOut && drawDate ? (
             <CountdownTimer 
                 targetDate={drawDate.toISOString()} 
                 isCard={false}

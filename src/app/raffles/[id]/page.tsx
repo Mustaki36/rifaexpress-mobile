@@ -17,13 +17,7 @@ import { getLotteryInfo, GetLotteryInfoOutput } from "@/ai/flows/get-lottery-inf
 import { CountdownTimer } from "@/components/countdown-timer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Template from "@/components/template";
-
-// Helper to parse YYYY-MM-DD string into a Date object at the end of the day
-const parseDrawDate = (dateString: string): Date => {
-  const [year, month, day] = dateString.split('-').map(Number);
-  // Creates a date at 23:59:59 in the local timezone
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
-}
+import { parseDrawDate } from "@/lib/utils";
 
 export default function RafflePage() {
   const params = useParams();
@@ -156,6 +150,14 @@ export default function RafflePage() {
 
   const totalPrice = selectedNumbers.length * raffle.ticketPrice;
   const drawDate = parseDrawDate(raffle.drawDate);
+
+  if (!drawDate) {
+     return (
+      <div className="container text-center py-20">
+        <h1 className="text-2xl font-bold">Fecha de rifa inválida</h1>
+      </div>
+    );
+  }
 
   return (
     <Template>
