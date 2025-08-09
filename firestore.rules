@@ -1,62 +1,54 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function isAuth() {
-      return request.auth != null;
+  
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
     }
-
+    
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    function getRole() {
-      // Check if the user document exists before trying to access its data.
-      return exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) ? get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role : '';
-    }
-
-    function isAdmin() {
-      return isAuth() && getRole() == 'admin';
-    }
-
-    // Allow admins to read/write anything
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-
-    match /raffles/{raffleId} {
-      allow read: if true;
-      allow create: if isAuth() && (request.resource.data.creatorId == request.auth.uid || isAdmin());
-      // Allow update if user is the creator/admin, or if they are only adding to soldTickets (buying a ticket)
-      allow update: if isAuth() && (
-        (resource.data.creatorId == request.auth.uid || isAdmin()) ||
-        (request.resource.data.keys().hasAll(['soldTickets']) && request.resource.data.soldTickets.size() > resource.data.soldTickets.size())
-      );
-      allow delete: if isAuth() && (resource.data.creatorId == request.auth.uid || isAdmin());
-    }
-
     match /usuarios/{userId} {
-      allow read: if isAuth();
-      allow create: if isAdmin(); // Fix: Allow admins to create user documents.
-      allow update: if isOwner(userId);
-      allow delete: if isAdmin();
+      // Admins can read/write any user document.
+      // Users can only read/write their own document.
+      allow read, write: if isAdmin() || isOwner(userId);
+      // Admins can create new user documents
+      allow create: if isAdmin();
     }
-
+    
+    match /raffles/{raffleId} {
+      // Anyone can read raffles
+      allow read: if true;
+      // Only admins or users with the 'creator' role can create raffles
+      allow create: if request.auth != null && (isAdmin() || request.auth.token.role == 'creator');
+      // Only admins or the original creator can update/delete a raffle
+      allow update, delete: if isAdmin() || (request.auth.uid == resource.data.creatorId);
+    }
+    
     match /reservations/{reservationId} {
-      allow list, read: if isAuth();
-      allow create, delete: if isAuth() && request.resource.data.userId == request.auth.uid;
-    }
-
-    match /results/{resultId} {
+        // Anyone can read reservations to see what's taken
         allow read: if true;
+        // Only authenticated users can create reservations for themselves
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        // Only the user who made the reservation can delete it
+        allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    match /results/{resultId} {
+        // Anyone can see past results
+        allow read: if true;
+        // Only admins can add or delete results
         allow create, delete: if isAdmin();
     }
     
     match /blockedUsers/{blockedId} {
-        allow read, list, create, update, delete: if isAdmin();
+        // Only admins can manage the block list
+        allow read, write, create, delete: if isAdmin();
     }
+
   }
 }
-
-    

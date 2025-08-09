@@ -25,11 +25,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuth } from "@/context/AuthContext";
 
 const formSchema = z.object({
   name: z.string().min(2, "El nombre es requerido."),
   email: z.string().email("Debe ser un email válido."),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
   role: z.enum(["regular", "creator"], {
     required_error: "Debes seleccionar un rol.",
   }),
@@ -38,36 +38,62 @@ const formSchema = z.object({
 interface AddUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUserAdded: (values: z.infer<typeof formSchema>) => Promise<void>;
+  onUserAdded: () => void; // Callback to refresh the user list
 }
 
 export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialogProps) {
   const { toast } = useToast();
+  const { firebaseUser } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       email: "",
-      password: "",
       role: "regular",
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!firebaseUser) {
+        toast({
+            variant: "destructive",
+            title: "Error de autenticación",
+            description: "No estás autenticado. Por favor, vuelve a iniciar sesión.",
+        });
+        return;
+    }
+
     try {
-      await onUserAdded(values);
-      toast({
-        title: "Usuario Creado",
-        description: `El usuario ${values.name} ha sido añadido. Deberá cambiar su contraseña al iniciar sesión.`,
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(values),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Ocurrió un error en el servidor.');
+      }
+      
+      toast({
+        title: "Operación Exitosa",
+        description: result.message,
+      });
+      onUserAdded(); // Refresh the list in the parent component
       onOpenChange(false);
       form.reset();
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
       toast({
         variant: "destructive",
-        title: "Error al crear usuario",
+        title: "Error al crear/actualizar usuario",
         description: errorMessage,
       });
     }
@@ -84,9 +110,9 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Añadir Nuevo Usuario</DialogTitle>
+          <DialogTitle>Añadir o Actualizar Usuario</DialogTitle>
           <DialogDescription>
-            Crea una cuenta de usuario manualmente. Se le pedirá al usuario que cambie su contraseña en el primer inicio de sesión.
+            Crea un nuevo usuario o actualiza uno existente. Si el email ya existe, se actualizará el nombre y el rol. Se enviará un enlace para establecer/restablecer la contraseña.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -112,19 +138,6 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input type="email" {...field} placeholder="ejemplo@email.com" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contraseña Temporal</FormLabel>
-                  <FormControl>
-                    <Input type="text" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -165,7 +178,7 @@ export function AddUserDialog({ open, onOpenChange, onUserAdded }: AddUserDialog
                 <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                    {form.formState.isSubmitting && <Loader2 className="mr-2 animate-spin" />}
-                   Añadir Usuario
+                   Guardar Usuario
                 </Button>
             </DialogFooter>
           </form>

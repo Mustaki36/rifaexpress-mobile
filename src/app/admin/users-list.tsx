@@ -45,7 +45,7 @@ import { AddUserDialog } from "./add-user-dialog";
 import { EditUserSheet } from "./edit-user-sheet";
 import { useBlock } from "@/context/BlockContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +53,7 @@ type ActionType = "suspend" | "delete";
 
 export function UsersList() {
   const { toast } = useToast();
-  const { user, suspendUser, deleteUser, addUser, editUser } = useAuth();
+  const { user, suspendUser, deleteUser, editUser } = useAuth();
   const { blockUser } = useBlock();
 
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -67,17 +67,13 @@ export function UsersList() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUsers = useCallback(async () => {
-    if (user?.role !== 'admin') { 
-        setError("No tienes permiso para ver esta sección.");
-        setUsers([]);
-        return;
-    }
+  const loadUsers = useCallback(() => {
+    if (!user?.role) return;
     
     setIsLoading(true);
     setError(null);
-    try {
-        const querySnapshot = await getDocs(collection(db, "usuarios"));
+    
+    const unsubscribe = onSnapshot(collection(db, "usuarios"), (querySnapshot) => {
         const userList = querySnapshot.docs.map(doc => {
             const data = doc.data();
             const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : new Date());
@@ -88,19 +84,20 @@ export function UsersList() {
             } as UserProfile;
         });
         setUsers(userList);
-    } catch (e) {
+        setIsLoading(false);
+    }, (e) => {
         console.error("Error fetching users: ", e);
         setError("No se pudieron cargar los usuarios. Verifica los permisos de Firestore y las reglas de seguridad.");
-    } finally {
         setIsLoading(false);
-    }
+    });
+
+    return unsubscribe;
   }, [user]);
 
   useEffect(() => {
-    if (user) {
-      loadUsers();
-    }
-  }, [user, loadUsers]);
+    const unsubscribe = loadUsers();
+    return () => unsubscribe && unsubscribe();
+  }, [loadUsers]);
   
   const getRoleDisplayName = (role: UserProfile['role']) => {
     switch (role) {
@@ -170,7 +167,6 @@ export function UsersList() {
         const errorMessage = error instanceof Error ? error.message : "Ocurrió un error desconocido.";
         toast({ variant: "destructive", title: "Error", description: errorMessage });
     } finally {
-        loadUsers();
         setIsAlertOpen(false);
         setUserToAction(null);
         setActionToConfirm(null);
@@ -185,14 +181,8 @@ export function UsersList() {
       });
   }
   
-  const handleAddUser = async (values: any) => {
-      await addUser(values);
-      loadUsers(); // Recargar usuarios
-  }
-  
   const handleEditUser = async (userId: string, values: any) => {
       await editUser(userId, values);
-      loadUsers(); // Recargar usuarios
   }
   
   const alertContent = {
@@ -318,7 +308,7 @@ export function UsersList() {
         </CardContent>
       </Card>
 
-      <AddUserDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen} onUserAdded={handleAddUser} />
+      <AddUserDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen} onUserAdded={() => {}} />
       <EditUserSheet open={isEditUserOpen} onOpenChange={setIsEditUserOpen} user={userToEdit} onUserEdited={handleEditUser} />
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
@@ -326,7 +316,7 @@ export function UsersList() {
           <AlertDialogHeader>
             <AlertDialogTitle>{actionToConfirm && alertContent[actionToConfirm].title}</AlertDialogTitle>
             <AlertDialogDescription>
-              {actionToConfirm && alertContent[actionToConfirm].description}
+              {actionToConfirm && alertContent[actionTo-confirm].description}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -340,5 +330,3 @@ export function UsersList() {
     </>
   );
 }
-
-    
