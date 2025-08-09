@@ -40,23 +40,12 @@ const formSchema = z.object({
   description: z.string().optional(),
   ticketPrice: z.coerce.number().min(0, "El precio debe ser un número positivo."),
   totalTickets: z.coerce.number().int().min(10, "Debe haber al menos 10 boletos."),
-  drawDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Por favor, introduce una fecha válida.",
+  drawDate: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), {
+    message: "Por favor, introduce una fecha válida en formato YYYY-MM-DD.",
   }),
   image: z.string().url("Por favor, introduce una URL de imagen válida."),
   aiHint: z.string().optional(),
 });
-
-// Helper to format date to yyyy-MM-ddThh:mm
-const toDateTimeLocal = (date: Date) => {
-    const ten = (i: number) => (i < 10 ? '0' : '') + i;
-    const YYYY = date.getFullYear();
-    const MM = ten(date.getMonth() + 1);
-    const DD = ten(date.getDate());
-    const HH = ten(date.getHours());
-    const mm = ten(date.getMinutes());
-    return `${YYYY}-${MM}-${DD}T${HH}:${mm}`;
-}
 
 export default function EditRafflePage() {
   const { toast } = useToast();
@@ -88,8 +77,7 @@ export default function EditRafflePage() {
   useEffect(() => {
     if (raffleToEdit) {
       form.reset({
-        ...raffleToEdit,
-        drawDate: toDateTimeLocal(raffleToEdit.drawDate),
+        ...raffleToEdit
       });
     }
   }, [raffleToEdit, form]);
@@ -178,11 +166,9 @@ export default function EditRafflePage() {
         ...editableValues,
         ticketPrice: raffleToEdit.ticketPrice,
         totalTickets: raffleToEdit.totalTickets,
-        drawDate: new Date(values.drawDate),
       } : 
       {
         ...values,
-        drawDate: new Date(values.drawDate),
       }
 
     editRaffle(raffleId, finalValues);
@@ -311,7 +297,7 @@ export default function EditRafflePage() {
                     <FormItem>
                     <FormLabel>Fecha del Sorteo</FormLabel>
                     <FormControl>
-                        <Input type="datetime-local" {...field} />
+                        <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>

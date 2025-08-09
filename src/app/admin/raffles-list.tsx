@@ -67,10 +67,10 @@ export function RafflesList() {
 
     switch (sortOption) {
       case "recent":
-        filtered.sort((a, b) => b.drawDate.getTime() - a.drawDate.getTime());
+        filtered.sort((a, b) => new Date(b.drawDate).getTime() - new Date(a.drawDate).getTime());
         break;
       case "oldest":
-        filtered.sort((a, b) => a.drawDate.getTime() - b.drawDate.getTime());
+        filtered.sort((a, b) => new Date(a.drawDate).getTime() - new Date(b.drawDate).getTime());
         break;
       case "highest_progress":
         filtered.sort((a, b) => (b.soldTickets.length / b.totalTickets) - (a.soldTickets.length / a.totalTickets));
@@ -315,5 +315,3 @@ export function RafflesList() {
     </>
   );
 }
-
-    

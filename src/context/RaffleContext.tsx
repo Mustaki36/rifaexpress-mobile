@@ -33,7 +33,7 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     setLoading(true);
-    const q = query(collection(db, "raffles"), orderBy("drawDate", "desc"));
+    const q = query(collection(db, "raffles"), orderBy("createdAt", "desc"));
     
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       const rafflesData = querySnapshot.docs.map(doc => {
@@ -41,7 +41,6 @@ export const RaffleProvider = ({ children }: { children: ReactNode }) => {
         return {
           id: doc.id,
           ...data,
-          drawDate: data.drawDate.toDate(),
           soldTickets: Array.isArray(data.soldTickets) ? data.soldTickets : [],
         } as Raffle;
       });
@@ -248,6 +247,3 @@ export const useRaffles = () => {
   }
   return context;
 };
-    
-
-    

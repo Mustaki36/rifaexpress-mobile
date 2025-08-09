@@ -10,7 +10,7 @@ export type Raffle = {
   ticketPrice: number;
   totalTickets: number;
   soldTickets: number[];
-  drawDate: Date;
+  drawDate: string; // Changed from Date to string
   aiHint: string;
   creatorId: string; // user ID
   status?: 'open' | 'closed';

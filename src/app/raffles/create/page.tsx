@@ -39,8 +39,8 @@ const formSchema = z.object({
   description: z.string().optional(),
   ticketPrice: z.coerce.number().min(0, "El precio debe ser un número positivo."),
   totalTickets: z.coerce.number().int().min(10, "Debe haber al menos 10 boletos."),
-  drawDate: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Por favor, introduce una fecha válida.",
+  drawDate: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}$/.test(val), {
+    message: "Por favor, introduce una fecha válida en formato YYYY-MM-DD.",
   }),
   image: z.string().url("Por favor, introduce una URL de imagen válida."),
   aiHint: z.string().optional(),
@@ -133,16 +133,9 @@ export default function CreateRafflePage() {
     if(!user) return;
     setIsSubmitting(true);
     try {
-        // The input type="date" provides a string in "YYYY-MM-DD" format.
-        // new Date() will parse this as UTC midnight. To treat it as local time,
-        // we can add the time zone offset.
-        const dateParts = values.drawDate.split('-').map(Number);
-        const drawDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 23, 59, 59, 999);
-
         await addRaffle({
           ...values,
           creatorId: user.id,
-          drawDate: drawDate,
           description: values.description || "",
           aiHint: values.aiHint || ""
         });

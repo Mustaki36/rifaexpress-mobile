@@ -18,6 +18,13 @@ import { CountdownTimer } from "@/components/countdown-timer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Template from "@/components/template";
 
+// Helper to parse YYYY-MM-DD string into a Date object at the end of the day
+const parseDrawDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  // Creates a date at 23:59:59 in the local timezone
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
+}
+
 export default function RafflePage() {
   const params = useParams();
   const { raffles, reservedTickets, reserveTicket, releaseTicket, purchaseTickets, releaseTicketsForUser, listenToRaffleReservations } = useRaffles();
@@ -148,6 +155,7 @@ export default function RafflePage() {
   }
 
   const totalPrice = selectedNumbers.length * raffle.ticketPrice;
+  const drawDate = parseDrawDate(raffle.drawDate);
 
   return (
     <Template>
@@ -175,7 +183,7 @@ export default function RafflePage() {
               <Tag className="h-4 w-4 text-primary"/> <span>Premio: <strong>{raffle.prize}</strong></span>
             </div>
             <div className="flex items-center gap-2 mb-4 text-muted-foreground">
-              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{new Date(raffle.drawDate).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
+              <Clock className="h-4 w-4 text-primary"/> <span>Fecha de sorteo original: <strong>{drawDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></span>
             </div>
             <p className="text-foreground/80 leading-relaxed">
               {raffle.description}

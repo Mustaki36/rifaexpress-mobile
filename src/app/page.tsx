@@ -21,6 +21,11 @@ import { RaffleCardSkeleton } from "@/components/raffle-card-skeleton";
 
 type SortOption = "recent" | "oldest" | "price_asc" | "price_desc";
 
+const parseDrawDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
+}
+
 export default function Home() {
   const { raffles, loading } = useRaffles();
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,10 +43,10 @@ export default function Home() {
 
     switch (sortOption) {
       case "recent":
-        filtered.sort((a, b) => new Date(b.drawDate).getTime() - new Date(a.drawDate).getTime());
+        filtered.sort((a, b) => parseDrawDate(b.drawDate).getTime() - parseDrawDate(a.drawDate).getTime());
         break;
       case "oldest":
-        filtered.sort((a, b) => new Date(a.drawDate).getTime() - new Date(b.drawDate).getTime());
+        filtered.sort((a, b) => parseDrawDate(a.drawDate).getTime() - parseDrawDate(b.drawDate).getTime());
         break;
       case "price_asc":
         filtered.sort((a, b) => a.ticketPrice - b.ticketPrice);

@@ -24,6 +24,11 @@ interface RaffleCardProps {
   raffle: Raffle;
 }
 
+const parseDrawDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
+}
+
 const calculateTimeLeft = (targetDate: Date) => {
     const difference = +new Date(targetDate) - +new Date();
     let timeLeft = {};
@@ -52,18 +57,19 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
   const cardOpenSoundUrl = "https://files.catbox.moe/01lxup.mp3";
   const { setAnimationDuration } = useTransition();
 
-  const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(raffle.drawDate).totalSeconds);
+  const drawDate = parseDrawDate(raffle.drawDate);
+  const [totalSecondsLeft, setTotalSecondsLeft] = useState(calculateTimeLeft(drawDate).totalSeconds);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-        const { totalSeconds } = calculateTimeLeft(raffle.drawDate);
+        const { totalSeconds } = calculateTimeLeft(drawDate);
         setTotalSecondsLeft(totalSeconds);
     }, 1000);
 
     return () => clearTimeout(timer);
   });
   
-  const drawDateFormatted = new Date(raffle.drawDate).toLocaleDateString('es-ES', {
+  const drawDateFormatted = drawDate.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'long',
       hour: 'numeric',
@@ -113,7 +119,7 @@ export function RaffleCard({ raffle }: RaffleCardProps) {
       <CardContent className="flex-grow p-6 pt-0">
         {isSoldOut ? (
             <CountdownTimer 
-                targetDate={raffle.drawDate.toISOString()} 
+                targetDate={drawDate.toISOString()} 
                 isCard={false}
                 raffleInfo={{
                     prize: raffle.prize,
