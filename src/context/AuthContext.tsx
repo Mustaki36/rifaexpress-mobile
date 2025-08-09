@@ -35,34 +35,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
-        // Forzar el refresco del token asegura que los claims estén actualizados.
+        // Force refresh the token to get the latest custom claims.
         await user.getIdToken(true); 
         const userDocRef = doc(db, "usuarios", user.uid);
         
-        // Usamos onSnapshot para escuchar cambios en el perfil del usuario en tiempo real.
-        const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+        const unsubUser = onSnapshot(userDocRef, async (docSnap) => {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                // El rol de Firestore es la fuente de verdad.
-                // Si está suspendido, cerramos sesión.
-                if (userData.role === 'suspended') {
+                
+                // Get the role from custom claims as the primary source of truth for permissions.
+                const tokenResult = await user.getIdTokenResult();
+                const claims = tokenResult.claims;
+                const userRole = claims.role || userData.role || 'regular';
+
+                if (userRole === 'suspended') {
                   setCurrentUser(null);
                   setFirebaseUser(null);
                   signOut(auth);
                 } else {
-                  // Combinamos los datos de Auth (uid, email) con los de Firestore.
                   const userProfile = { 
                       id: user.uid, 
                       email: user.email!,
                       ...userData,
-                      // Convertimos el Timestamp de Firestore a un objeto Date de JS.
+                      role: userRole, // Use the role from claims/userData
                       createdAt: (userData.createdAt as any)?.toDate ? (userData.createdAt as any).toDate() : new Date(),
                   } as UserProfile;
                   setCurrentUser(userProfile);
                   setFirebaseUser(user);
                 }
             } else {
-               // Si el documento de Firestore no existe, el usuario no está completamente configurado.
                setCurrentUser(null);
                setFirebaseUser(null);
             }
@@ -74,7 +75,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setLoading(false);
         });
 
-        // Limpiamos el listener de perfil cuando el estado de auth cambia.
         return () => unsubUser();
       } else {
         setCurrentUser(null);
@@ -83,13 +83,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     
-    // Limpiamos el listener de auth cuando el componente se desmonta.
     return () => unsubscribe();
   }, []);
 
   const login = async (email: string, pass: string): Promise<UserProfile | null> => {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     const user = userCredential.user;
+
+    // Force token refresh on login to get latest claims.
+    const tokenResult = await user.getIdTokenResult(true);
+    const claims = tokenResult.claims;
+    const userRole = claims.role || 'regular';
+
+    if (userRole === 'suspended') {
+      await signOut(auth);
+      throw new Error("This account is suspended.");
+    }
+
     const userDocRef = doc(db, "usuarios", user.uid);
     const userDocSnap = await getDoc(userDocRef);
     
@@ -103,6 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              id: userCredential.user.uid,
              email: userCredential.user.email!, 
              ...userData,
+             role: userRole, // Ensure role from claims is used
              createdAt: (userData.createdAt as any)?.toDate ? (userData.createdAt as any).toDate() : new Date(),
          } as UserProfile;
          return userProfile;
@@ -138,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const forcePasswordChange = async (userId: string, newPass: string) => {
-      // Esta simulación es solo para la interfaz. El cambio de contraseña real lo inicia el admin.
+      // This simulation is only for the UI. The actual password change is initiated by the admin.
       const userDocRef = doc(db, "usuarios", userId);
       await updateDoc(userDocRef, {
         mustChangePassword: false,
