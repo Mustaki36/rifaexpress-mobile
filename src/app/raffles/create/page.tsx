@@ -133,10 +133,11 @@ export default function CreateRafflePage() {
     if(!user) return;
     setIsSubmitting(true);
     try {
-        const drawDate = new Date(values.drawDate);
-        if (values.drawDate.length <= 10) { // Check if only date is provided (e.g., "YYYY-MM-DD")
-            drawDate.setHours(23, 59, 59, 999); // Set to end of day
-        }
+        // The input type="date" provides a string in "YYYY-MM-DD" format.
+        // new Date() will parse this as UTC midnight. To treat it as local time,
+        // we can add the time zone offset.
+        const dateParts = values.drawDate.split('-').map(Number);
+        const drawDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 23, 59, 59, 999);
 
         await addRaffle({
           ...values,
@@ -156,8 +157,6 @@ export default function CreateRafflePage() {
         toast({ variant: "destructive", title: "Error", description: errorMessage });
         setIsSubmitting(false); // Make sure to stop loading on error
     } 
-    // We don't call setIsSubmitting(false) in a finally block if navigation is successful,
-    // because the component will unmount.
   }
 
   return (
@@ -263,7 +262,7 @@ export default function CreateRafflePage() {
                     <FormItem>
                     <FormLabel>Fecha del Sorteo</FormLabel>
                     <FormControl>
-                        <Input type="datetime-local" {...field} />
+                        <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
