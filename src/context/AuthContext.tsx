@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
-        const claims = (await user.getIdTokenResult()).claims;
+        const claims = (await user.getIdTokenResult(true)).claims; // Force refresh
         const userRole = claims.role || 'regular'; // Default to regular if no role claim
 
         const unsubUser = onSnapshot(userDocRef, (docSnap) => {
