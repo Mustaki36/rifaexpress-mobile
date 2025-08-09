@@ -133,10 +133,15 @@ export default function CreateRafflePage() {
     if(!user) return;
     setIsSubmitting(true);
     try {
+        const drawDate = new Date(values.drawDate);
+        if (values.drawDate.length <= 10) { // Check if only date is provided (e.g., "YYYY-MM-DD")
+            drawDate.setHours(23, 59, 59, 999); // Set to end of day
+        }
+
         await addRaffle({
           ...values,
           creatorId: user.id,
-          drawDate: new Date(values.drawDate),
+          drawDate: drawDate,
           description: values.description || "",
           aiHint: values.aiHint || ""
         });
