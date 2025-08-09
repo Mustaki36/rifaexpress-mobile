@@ -3,7 +3,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RafflesList } from "./raffles-list";
-import { ListOrdered, Shield, LogOut, History, ShieldX, Users } from "lucide-react";
+import { ListOrdered, Shield, LogOut, History, ShieldX, Users, Loader2 } from "lucide-react";
 import { AdminLoginForm } from "./login-form";
 import { SecuritySettingsForm } from "./security-settings-form";
 import { Button } from "@/components/ui/button";
@@ -15,20 +15,13 @@ import { UsersList } from "./users-list";
 
 
 function AdminDashboard() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   
   const handleLogout = () => {
     logout();
     router.push("/");
   };
-  
-  // This check now correctly handles both the mock admin and a real admin role.
-  const isAdmin = isAuthenticated && user?.role === 'admin';
-
-  if (!isAdmin) {
-    return <AdminLoginForm />;
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -97,5 +90,21 @@ function AdminDashboard() {
 
 
 export default function AdminPage() {
-  return <AdminDashboard />;
+    const { isAuthenticated, user, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    const isAdmin = isAuthenticated && user?.role === 'admin';
+
+    if (!isAdmin) {
+        return <AdminLoginForm />;
+    }
+
+    return <AdminDashboard />;
 }
